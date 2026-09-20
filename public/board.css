@@ -1,0 +1,141 @@
+.board-head {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+.board-head .wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: none; }
+.board-title { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+
+.presence { display: flex; align-items: center; }
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 650;
+  border: 2px solid var(--surface);
+  margin-left: -8px;
+}
+.avatar:first-child { margin-left: 0; }
+
+.conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+.conn::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #1f9d55; }
+.conn[data-state="connecting"]::before { background: #d99a06; }
+.conn[data-state="offline"]::before { background: #b42318; }
+
+#board {
+  position: relative;
+  padding: 22px 20px 60px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  overflow-x: auto;
+  min-height: 70vh;
+}
+
+.column {
+  background: #eff0f4;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 310px;
+  flex: 0 0 310px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 160px);
+}
+.column-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 8px;
+  font-weight: 600;
+}
+.column-count { color: var(--ink-faint); font-weight: 500; font-size: 0.85rem; }
+.column-list { padding: 0 10px 10px; overflow-y: auto; flex: 1; min-height: 60px; }
+.column.drag-over { border-color: var(--accent); background: var(--accent-soft); }
+
+.pcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 1px rgba(16, 18, 27, 0.04);
+  cursor: grab;
+}
+.pcard:active { cursor: grabbing; }
+.pcard.dragging { opacity: 0.4; }
+.pcard.pending { border-style: dashed; opacity: 0.75; }
+.pcard.conflict { animation: shake 0.3s ease; border-color: var(--danger); }
+@keyframes shake {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.pcard-body { white-space: pre-wrap; word-break: break-word; }
+.pcard-body[contenteditable="true"]:focus { outline: 2px solid var(--accent-ring); border-radius: 4px; }
+.pcard-masked { color: var(--ink-faint); font-style: italic; letter-spacing: 0.08em; }
+.pcard-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+.vote {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--ink-muted);
+}
+.vote[data-voted="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.pcard-del { margin-left: auto; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 0.95rem; padding: 0 4px; }
+.pcard-del:hover { color: var(--danger); }
+
+.composer textarea {
+  width: 100%;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  padding: 9px 11px;
+  min-height: 42px;
+  font: inherit;
+}
+.drop-line { height: 2px; background: var(--accent); border-radius: 2px; margin: 4px 2px; }
+
+.cursor-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.cursor {
+  position: absolute;
+  transform: translate(-2px, -2px);
+  transition: left 0.08s linear, top 0.08s linear;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.cursor svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.cursor span {
+  /* currentColor would resolve against the span's own white text, so the
+     colour is handed down as a custom property instead. */
+  background: var(--cursor-color, #4f46e5);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  margin-top: 10px;
+}

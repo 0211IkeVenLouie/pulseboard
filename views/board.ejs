@@ -1,0 +1,31 @@
+<%- include('partials/head', { title: board.title + ' — Pulseboard', extraCss: '/board.css' }) %>
+<header class="board-head">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a>
+    <span class="board-title"><%= board.title %></span>
+    <span class="badge badge-quiet"><%= board.kind %></span>
+    <span class="spacer"></span>
+    <span class="conn" id="conn" data-state="connecting">Connecting…</span>
+    <div class="presence" id="presence"></div>
+    <% if (board.kind === 'retro') { %>
+      <button class="btn btn-sm" id="reveal-toggle" hidden></button>
+    <% } %>
+    <button class="btn btn-sm" id="add-column">+ Column</button>
+    <button class="btn btn-sm" id="copy-link">Copy link</button>
+  </div>
+</header>
+
+<main id="board" aria-live="polite">
+  <div class="cursor-layer" id="cursors" aria-hidden="true"></div>
+  <p class="muted" id="loading">Loading board…</p>
+</main>
+
+<div class="toasts" id="toasts"></div>
+
+<script
+  id="bootstrap"
+  type="application/json"><%- JSON.stringify({ slug: board.slug, kind: board.kind, identity }) %></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/board.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<%- include('partials/head', { title: 'Not found — Pulseboard' }) %>
+<header class="topbar">
+  <div class="wrap"><a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a></div>
+</header>
+<main class="wrap narrow" style="padding-top: 72px;">
+  <div class="empty">
+    <strong><%= typeof message !== 'undefined' ? message : 'That board does not exist.' %></strong>
+    Board links are random and unlisted, so a typo lands here.
+    <div style="margin-top: 16px;"><a class="btn btn-primary" href="/">Start a new board</a></div>
+  </div>
+</main>
+</body>
+</html>

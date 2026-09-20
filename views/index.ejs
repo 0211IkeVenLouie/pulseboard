@@ -1,0 +1,57 @@
+<%- include('partials/head', { title: 'Pulseboard — real-time retro & kanban' }) %>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a>
+    <span class="spacer"></span>
+    <a class="btn btn-sm" href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>">Source</a>
+  </div>
+</header>
+
+<main class="wrap narrow" style="padding-top: 56px;">
+  <h1>Retro and kanban boards that move while you watch.</h1>
+  <p class="muted" style="font-size: 1.05rem;">
+    Open a board in two windows and drag a card. Everyone sees it land, cursors and all.
+    No accounts, no email, no invite flow — the URL is the room.
+  </p>
+
+  <div style="display: flex; gap: 10px; margin: 26px 0 40px; flex-wrap: wrap;">
+    <% if (demoSlug) { %>
+      <a class="btn btn-primary" href="/b/<%= demoSlug %>">Open the demo board →</a>
+    <% } else { %>
+      <a class="btn btn-primary" href="/demo">Open the demo board →</a>
+    <% } %>
+    <a class="btn" href="#new">Start an empty board</a>
+  </div>
+
+  <div class="card" id="new">
+    <h2>New board</h2>
+    <form method="post" action="/boards">
+      <div class="field">
+        <label for="title">Board name</label>
+        <input type="text" id="title" name="title" placeholder="Sprint 24 retro" maxlength="120" />
+      </div>
+      <div class="field">
+        <label for="kind">Template</label>
+        <select id="kind" name="kind">
+          <option value="retro">Retro — Went well / To improve / Action items</option>
+          <option value="kanban">Kanban — Backlog / In progress / Review / Done</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Create board</button>
+      <p class="hint">Anyone with the link can read and edit. Boards are not listed anywhere.</p>
+    </form>
+  </div>
+
+  <h2 style="margin-top: 44px;">What is actually hard here</h2>
+  <p class="muted">
+    Two people dragging the same card at the same moment. Pulseboard gives every card a
+    <strong>fractional index</strong> so a move rewrites one row instead of renumbering a column, and a
+    <strong>version guard</strong> so a stale drag is rejected and snaps back rather than silently undoing
+    someone else's move. Votes take the opposite route: they commute, so they need no guard at all.
+    <a href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>#the-hard-part">Read the write-up →</a>
+  </p>
+</main>
+
+<footer class="site wrap"><span class="faint">Pulseboard · Node, Postgres, Socket.IO</span></footer>
+</body>
+</html>

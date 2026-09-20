@@ -1,0 +1,29 @@
+# fly launch --no-deploy && fly postgres create && fly postgres attach <db>
+app = "pulseboard"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  SEED_DEMO = "true"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # Socket.IO holds a long-lived connection, so at least one machine stays warm.
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
