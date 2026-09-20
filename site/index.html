@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pulseboard — Real-time retro and kanban boards</title>
+<meta name="description" content="Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room." />
+<meta property="og:title" content="Pulseboard — Real-time retro and kanban boards" />
+<meta property="og:description" content="Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%234f46e5'/></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <span class="dot"></span>
+    <span class="name">Pulseboard</span>
+    <span class="spacer"></span>
+    <a href="https://github.com/0211IkeVenLouie/pulseboard">Source</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="tagline">Real-time retro and kanban boards</p>
+    <h1>Boards that move while you watch.</h1>
+    <p class="lede">Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/0211IkeVenLouie/pulseboard">Read the code →</a>
+      <a class="btn" href="#run">Run it in one command</a>
+    </div>
+    <div class="meta">
+      <span class="chip">16 tests passing</span>
+      <span class="chip-quiet chip">Node 22 · TypeScript · Express · Socket.IO · Postgres 16</span>
+    </div>
+  </section>
+
+  <figure>
+    <img src="screenshot.png" alt="A retro board with three columns, live presence avatars and another person's cursor" />
+    <figcaption>A retro board with three columns, live presence avatars and another person's cursor</figcaption>
+  </figure>
+
+  <h2>The hard part</h2>
+  <p class="question">Two people drag the same card at the same moment. What happens?</p>
+  <p>Most tutorials answer “last write wins” and move on, which in practice means one person’s drag silently undoes the other’s while both screens show something different. Pulseboard answers it in three parts.</p>
+    <h3>1. Positions are fractional indexes, not integers</h3>
+  <p>A card’s place is a base-62 string compared lexicographically. Dropping between <code>"a1"</code> and <code>"a3"</code> mints <code>"a2"</code> and writes <strong>one row</strong>. The integer alternative renumbers the whole column on every move, so concurrent drops collide on rows neither person touched.</p>
+  <h3>2. Only one end of the drop is trusted</h3>
+  <p>The browser says “put this between A and B”, but by the time that lands, B may have moved and someone else’s card may already be in the gap. The server trusts one anchor and re-reads the other bound under a row lock. Trusting both is what makes two simultaneous drops mint the <em>same</em> key — there is a test that fails against that version and passes against this one.</p>
+  <h3>3. Same card, same moment → the loser is told</h3>
+  <p>Every card carries a version. A stale drag is rejected with the authoritative card, so the optimistic UI snaps back with a toast instead of resurrecting a position someone already moved away from.</p>
+  <h3>4. …and votes deliberately skip all of it</h3>
+  <p>Votes commute — two people voting at the same instant is not a conflict, it is two votes. Knowing which operations <em>need</em> concurrency control is most of the work; adding it everywhere is just latency.</p>
+  
+    <h3>Not concurrency, but worth a line</h3>
+  <p>Retro boards hide cards until everyone has written theirs. That masking happens <strong>on the server</strong> — a hidden card’s text is never sent to another client. Masking in CSS is one devtools inspection away from useless, which rather defeats a blind retro.</p>
+
+  <h2 id="run">Running it</h2>
+  <p>It is a server application — Postgres, sessions, and a live WebSocket connection. This page is a static showcase; the app itself needs somewhere to run. One command does it:</p>
+  <pre><code>git clone https://github.com/0211IkeVenLouie/pulseboard
+cd pulseboard
+docker compose up</code></pre>
+  <p>That brings up Postgres, runs the migrations and seeds a demo with real data in it, so there is something to look at the moment it boots.</p>
+
+  <h2>See it for yourself</h2>
+  <ol class="steps">
+    <li>Open the demo board in two windows, side by side.</li>
+    <li>Drag the same card to different columns at the same time. One lands; the other snaps back.</li>
+    <li>Drag <em>different</em> cards into the same gap at once. Both land, in the same order in both windows.</li>
+    <li>Hit <strong>Hide cards</strong> in one window and inspect the other’s DOM. The text is not there.</li>
+  </ol>
+
+  <h2>Also in this set</h2>
+  <div class="others">
+    <a class="other" href="https://0211ikevenlouie.github.io/slotline/"><span><span class="t">Slotline</span><br /><span class="d">Availability and booking pages</span></span></a>
+    <a class="other" href="https://0211ikevenlouie.github.io/evensplit/"><span><span class="t">Evensplit</span><br /><span class="d">Shared expenses, minimal settle-up</span></span></a>
+  </div>
+
+  <div class="callout">
+    <strong>Honest about what this page is.</strong>
+    A static showcase on GitHub Pages. The interesting behaviour described above — the database constraint, the server-side masking, the conflict resolution — happens on a server, and a static page cannot fake it without contradicting every claim on it.
+  </div>
+</main>
+
+<footer class="wrap">
+  <p>Built by Ike Ven Louie Anicete · MIT licensed · <a href="https://github.com/0211IkeVenLouie/pulseboard">github.com/0211IkeVenLouie/pulseboard</a></p>
+</footer>
+</body>
+</html>
