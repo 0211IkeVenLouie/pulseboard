@@ -31,7 +31,7 @@
       <a class="btn" href="#run">Run it in one command</a>
     </div>
     <div class="meta">
-      <span class="chip">16 tests passing</span>
+      <span class="chip">17 tests passing</span>
       <span class="chip-quiet chip">Node 22 · TypeScript · Express · Socket.IO · Postgres 16</span>
     </div>
   </section>
@@ -46,6 +46,7 @@
   <p>Most tutorials answer “last write wins” and move on, which in practice means one person’s drag silently undoes the other’s while both screens show something different. Pulseboard answers it in three parts.</p>
     <h3>1. Positions are fractional indexes, not integers</h3>
   <p>A card’s place is a base-62 string compared lexicographically. Dropping between <code>"a1"</code> and <code>"a3"</code> mints <code>"a2"</code> and writes <strong>one row</strong>. The integer alternative renumbers the whole column on every move, so concurrent drops collide on rows neither person touched.</p>
+  <p>That design has a dependency it does not announce: the keys are compared <strong>byte-wise</strong>. Postgres only does that if you say so — a <code>text</code> column inherits the database collation, and under <code>en_US.UTF-8</code> the comparison is case-insensitive, so <code>'l' &lt; 'V'</code> and the server silently disagrees with the client about card order. The tests passed twenty times locally and failed on the first CI run, because my Postgres was <code>C.UTF-8</code> and the stock image is not. Fixed by pinning the column to <code>COLLATE &quot;C&quot;</code>, with a regression test.</p>
   <h3>2. Only one end of the drop is trusted</h3>
   <p>The browser says “put this between A and B”, but by the time that lands, B may have moved and someone else’s card may already be in the gap. The server trusts one anchor and re-reads the other bound under a row lock. Trusting both is what makes two simultaneous drops mint the <em>same</em> key — there is a test that fails against that version and passes against this one.</p>
   <h3>3. Same card, same moment → the loser is told</h3>

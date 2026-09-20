@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { after, beforeEach } from 'node:test';
+import { query } from '../src/db.js';
 import { closeDatabase, resetDatabase } from './helpers.js';
 import {
   createBoard,
@@ -204,3 +205,45 @@ test('hidden retro cards are masked server-side for everyone but the author', as
 function author(user: { id: string; name: string }) {
   return { authorId: user.id, authorName: user.name };
 }
+
+test('the database orders sort keys byte-wise, exactly as the client does', async () => {
+  // A regression test for a bug that only appears on a database with a
+  // linguistic default collation (a stock postgres:16 image is en_US.UTF-8).
+  // There, 'l' < 'V', the server disagrees with the client about card order,
+  // and a move cannot find the card adjacent to its drop point.
+  const { board, columnIds } = await seedBoard();
+
+  const collation = await query<{ collation_name: string | null }>(
+    `SELECT collation_name FROM information_schema.columns
+      WHERE table_name = 'cards' AND column_name = 'sort_key'`,
+  );
+  assert.equal(collation[0]?.collation_name, 'C', 'sort_key must be pinned to byte ordering');
+
+  // Keys spanning all three ranges of the alphabet, in an order that a
+  // case-insensitive collation would get wrong.
+  const keys = ['0V', 'A', 'G', 'V', 'a', 'l', 'z'];
+  for (const [index, key] of keys.entries()) {
+    await query(
+      `INSERT INTO cards (board_id, column_id, body, sort_key, author_id, author_name)
+       VALUES ($1, $2, $3, $4, 'seed', 'Seed')`,
+      [board.id, columnIds[0], `card ${index}`, key],
+    );
+  }
+
+  const ordered = await query<{ sort_key: string }>(
+    'SELECT sort_key FROM cards WHERE column_id = $1 ORDER BY sort_key',
+    [columnIds[0]],
+  );
+  assert.deepEqual(
+    ordered.map((row) => row.sort_key),
+    [...keys].sort(),
+    'Postgres and JavaScript must agree on the order',
+  );
+
+  // And the adjacency lookup a move depends on must find the right neighbour.
+  const above = await query<{ sort_key: string }>(
+    'SELECT sort_key FROM cards WHERE column_id = $1 AND sort_key > $2 ORDER BY sort_key LIMIT 1',
+    [columnIds[0], 'V'],
+  );
+  assert.equal(above[0]?.sort_key, 'a', "the card after 'V' is 'a', not nothing");
+});

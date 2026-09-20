@@ -39,6 +39,31 @@ cards never contend at all.
 at the very front, repeatedly, without keys collapsing to nothing — covered by
 tests that split the same gap 200 times and prepend 500 times.
 
+#### The bug that only showed up in CI
+
+That design has a dependency it does not announce: the keys are compared
+**byte-wise**. JavaScript does that natively, so the client sorts
+`'0' < 'V' < 'l'`. Postgres does not, unless you tell it to — a `text` column
+inherits the database's default collation, and under a linguistic locale such
+as `en_US.UTF-8` the comparison is case-insensitive at the primary level, so
+`'l' < 'V'`.
+
+Client and server then disagree about the order of the cards, and
+`WHERE sort_key > $1` — which is how a move finds the card adjacent to its drop
+point — returns the wrong row or none at all.
+
+The tests passed locally for twenty consecutive runs and failed on the first CI
+run, because my machine's Postgres was `C.UTF-8` and the stock `postgres:16`
+image is `en_US.UTF-8`. The fix is one line per column:
+
+```sql
+ALTER TABLE cards ALTER COLUMN sort_key TYPE text COLLATE "C";
+```
+
+`migrations/002_sort_key_collation.sql`, with a regression test that asserts
+both the declared collation and that Postgres and JavaScript agree on the order
+of `['0V', 'A', 'G', 'V', 'a', 'l', 'z']`.
+
 ### 2. Only one end of the drop is trusted
 
 The browser says "put this card between A and B". By the time that message
@@ -136,7 +161,7 @@ echo "DATABASE_URL=postgres://localhost:5432/pulseboard_test" > .env.test
 npm test
 ```
 
-The suite is 16 tests in two halves: property-ish tests for the ordering
+The suite is 17 tests in two halves: property-ish tests for the ordering
 algorithm (random interleaved inserts must never break lexicographic order or
 mint a duplicate), and integration tests that run genuinely concurrent moves
 through `Promise.all` against real Postgres to check that exactly one wins and

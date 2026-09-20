@@ -1,0 +1,21 @@
+-- Pin the fractional-index columns to byte-wise ordering.
+--
+-- The sort keys in `ordering.ts` are base-62 strings whose whole design rests
+-- on ASCII order: digits < uppercase < lowercase. JavaScript compares strings
+-- that way, so the client sorts '0' < 'V' < 'l'.
+--
+-- Postgres does NOT, unless you say so. A `text` column inherits the database's
+-- default collation, and under a linguistic locale such as en_US.UTF-8 the
+-- comparison is case-insensitive at the primary level, so 'l' < 'V'. The client
+-- and the server then disagree about what order the cards are in, and
+-- `WHERE sort_key > $1` — which is how a move finds the card adjacent to its
+-- drop point — silently returns the wrong row or none at all.
+--
+-- This is not theoretical: it is why two people dropping into the same gap both
+-- minted the same key on a stock `postgres:16` image (en_US.UTF-8) while the
+-- same test passed against a C.UTF-8 database.
+--
+-- COLLATE "C" is byte-wise, present in every Postgres installation, and makes
+-- the column behave identically to the client regardless of the database locale.
+ALTER TABLE cards   ALTER COLUMN sort_key TYPE text COLLATE "C";
+ALTER TABLE columns ALTER COLUMN sort_key TYPE text COLLATE "C";
