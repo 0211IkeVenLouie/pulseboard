@@ -3,53 +3,85 @@
   <div class="wrap">
     <a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a>
     <span class="spacer"></span>
-    <a class="btn btn-sm" href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>">Source</a>
+    <a class="btn btn-sm" href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>">Source ↗</a>
   </div>
 </header>
 
-<main class="wrap narrow" style="padding-top: 56px;">
-  <h1>Retro and kanban boards that move while you watch.</h1>
-  <p class="muted" style="font-size: 1.05rem;">
-    Open a board in two windows and drag a card. Everyone sees it land, cursors and all.
-    No accounts, no email, no invite flow — the URL is the room.
-  </p>
+<main class="wrap narrow">
+  <section class="hero">
+    <h1>Boards that move <span class="gradient-text">while you watch</span>.</h1>
+    <p class="lede">
+      Open the same link in two windows and drag a card. It lands in both — cursors,
+      votes and all. No accounts, no email, no invite flow. The URL is the room.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="<%= demoSlug ? '/b/' + demoSlug : '/demo' %>">Open the demo board →</a>
+      <a class="btn" href="#new">Start an empty board</a>
+    </div>
+    <div class="chips">
+      <span class="chip" style="--chip-hue: var(--hue-1)">Live cursors</span>
+      <span class="chip" style="--chip-hue: var(--hue-2)">Retro voting</span>
+      <span class="chip" style="--chip-hue: var(--hue-3)">Hide until reveal</span>
+      <span class="chip" style="--chip-hue: var(--hue-4)">No signup</span>
+    </div>
+  </section>
 
-  <div style="display: flex; gap: 10px; margin: 26px 0 40px; flex-wrap: wrap;">
-    <% if (demoSlug) { %>
-      <a class="btn btn-primary" href="/b/<%= demoSlug %>">Open the demo board →</a>
-    <% } else { %>
-      <a class="btn btn-primary" href="/demo">Open the demo board →</a>
-    <% } %>
-    <a class="btn" href="#new">Start an empty board</a>
-  </div>
+  <section class="section" id="new">
+    <div class="card">
+      <h2>New board</h2>
+      <form method="post" action="/boards">
+        <div class="field">
+          <label for="title">Board name</label>
+          <input type="text" id="title" name="title" placeholder="Sprint 24 retro" maxlength="120" />
+        </div>
+        <div class="field">
+          <label for="kind">Template</label>
+          <select id="kind" name="kind">
+            <option value="retro">Retro — Went well / To improve / Action items</option>
+            <option value="kanban">Kanban — Backlog / In progress / Review / Done</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Create board</button>
+        <p class="hint">Anyone with the link can read and edit. Boards are not listed anywhere.</p>
+      </form>
+    </div>
+  </section>
 
-  <div class="card" id="new">
-    <h2>New board</h2>
-    <form method="post" action="/boards">
-      <div class="field">
-        <label for="title">Board name</label>
-        <input type="text" id="title" name="title" placeholder="Sprint 24 retro" maxlength="120" />
+  <section class="section">
+    <p class="section-label">What is actually hard here</p>
+    <h2>Two people drag the same card at the same moment.</h2>
+    <p class="muted">
+      Most implementations answer “last write wins”, which means one person’s drag
+      silently undoes the other’s while both screens show something different.
+    </p>
+
+    <div class="split" style="margin-top: 18px;">
+      <div class="feature">
+        <div class="feature-icon">⇅</div>
+        <h3>Fractional ordering</h3>
+        <p>A card’s position is a string, not an integer, so a move rewrites one row instead of renumbering a whole column.</p>
       </div>
-      <div class="field">
-        <label for="kind">Template</label>
-        <select id="kind" name="kind">
-          <option value="retro">Retro — Went well / To improve / Action items</option>
-          <option value="kanban">Kanban — Backlog / In progress / Review / Done</option>
-        </select>
+      <div class="feature">
+        <div class="feature-icon">⚔</div>
+        <h3>Version guards</h3>
+        <p>A stale drag is rejected with the authoritative card, and the optimistic UI snaps back instead of undoing someone else's move.</p>
       </div>
-      <button class="btn btn-primary" type="submit">Create board</button>
-      <p class="hint">Anyone with the link can read and edit. Boards are not listed anywhere.</p>
-    </form>
-  </div>
+      <div class="feature">
+        <div class="feature-icon">▲</div>
+        <h3>Votes commute</h3>
+        <p>Two people voting at once is not a conflict, it is two votes — so votes skip the guard entirely.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">◐</div>
+        <h3>Masked server-side</h3>
+        <p>Hidden retro cards never reach another browser. Masking in CSS is one devtools inspection from useless.</p>
+      </div>
+    </div>
 
-  <h2 style="margin-top: 44px;">What is actually hard here</h2>
-  <p class="muted">
-    Two people dragging the same card at the same moment. Pulseboard gives every card a
-    <strong>fractional index</strong> so a move rewrites one row instead of renumbering a column, and a
-    <strong>version guard</strong> so a stale drag is rejected and snaps back rather than silently undoing
-    someone else's move. Votes take the opposite route: they commute, so they need no guard at all.
-    <a href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>#the-hard-part">Read the write-up →</a>
-  </p>
+    <p class="muted" style="margin-top: 18px;">
+      <a href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>#the-hard-part">Read the full write-up →</a>
+    </p>
+  </section>
 </main>
 
 <footer class="site wrap"><span class="faint">Pulseboard · Node, Postgres, Socket.IO</span></footer>

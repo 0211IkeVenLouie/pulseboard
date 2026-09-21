@@ -28,6 +28,7 @@ let editingCardId = null;
 let pendingMoves = 0;
 const columnEls = new Map();
 const cursors = new Map();
+const seenCards = new Set();
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -217,6 +218,11 @@ function emptyColumn(column) {
 function cardNode(card) {
   const el = document.createElement('article');
   el.className = 'pcard';
+  // Animate a card in only the first time this client sees it.
+  if (!seenCards.has(card.id)) {
+    el.classList.add('is-new');
+    seenCards.add(card.id);
+  }
   el.dataset.cardId = card.id;
   el.draggable = true;
   if (card.pending) el.classList.add('pending');
