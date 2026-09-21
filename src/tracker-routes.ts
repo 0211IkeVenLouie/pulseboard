@@ -10,6 +10,10 @@ import { getDemoBoard } from './boards.js';
 import { AppError, httpStatusFor } from './errors.js';
 import {
   ALL_STATUSES,
+  addComment,
+  deleteComment,
+  editComment,
+  listComments,
   BOARD_STATUSES,
   PRIORITY_LABELS,
   STATUS_LABELS,
@@ -305,12 +309,15 @@ export function registerTrackerRoutes(app: express.Express): void {
       return;
     }
     await recordView(req.user!.id, 'issue', issue.id);
+    const [members, comments] = await Promise.all([listMembers(project.id), listComments(issue.id)]);
     res.render('tracker/issue', {
       project,
       issue,
-      members: await listMembers(project.id),
+      members,
+      comments,
       active: 'projects',
       error: null,
+      editingComment: String(req.query.edit ?? ''),
       returnTo: cameFrom(req, `/projects/${project.key}/board`),
     });
   }));
@@ -325,19 +332,24 @@ export function registerTrackerRoutes(app: express.Express): void {
     }
     const body = req.body ?? {};
     try {
-      await updateIssue({
-        issueId: issue.id,
-        baseVersion: Number(body.version),
-        patch: {
-          title: String(body.title ?? issue.title),
-          description: String(body.description ?? ''),
-          type: String(body.type ?? issue.type) as IssueType,
-          status: String(body.status ?? issue.status) as IssueStatus,
-          priority: String(body.priority ?? issue.priority) as IssuePriority,
-          assigneeId: body.assigneeId ? String(body.assigneeId) : null,
-        },
-      });
-      const returnTo = safeReturnTo(body.returnTo, `/projects/${project.key}/board`);
+      const patch: Record<string, unknown> = {};
+      if (body.title !== undefined) patch.title = String(body.title);
+      if (body.description !== undefined) patch.description = String(body.description);
+      if (body.type !== undefined) patch.type = String(body.type) as IssueType;
+      if (body.status !== undefined) patch.status = String(body.status) as IssueStatus;
+      if (body.priority !== undefined) patch.priority = String(body.priority) as IssuePriority;
+      // An assignee select always posts, with '' meaning unassigned.
+      if (body.assigneeId !== undefined) patch.assigneeId = body.assigneeId ? String(body.assigneeId) : null;
+
+      await updateIssue({ issueId: issue.id, baseVersion: Number(body.version), patch });
+      const fallback = `/projects/${project.key}/board`;
+      const returnTo = safeReturnTo(body.returnTo, fallback);
+      // "Stay here" is a real choice: editing a description then being thrown
+      // back to the board is worse than staying with the issue.
+      if (body.stay) {
+        res.redirect(`/projects/${project.key}/issues/${issue.number}?from=${encodeURIComponent(returnTo)}`);
+        return;
+      }
       res.redirect(`${returnTo}${returnTo.includes('?') ? '&' : '?'}saved=${issue.key}`);
     } catch (error) {
       if (error instanceof AppError) {
@@ -349,6 +361,59 @@ export function registerTrackerRoutes(app: express.Express): void {
           error: error.message,
           returnTo: safeReturnTo(body.returnTo, `/projects/${project.key}/board`),
         });
+        return;
+      }
+      throw error;
+    }
+  }));
+
+  app.post('/projects/:key/issues/:number/comments', requireUser, asyncRoute(async (req, res) => {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    const issue = await getIssue(project.key, Number(req.params.number));
+    if (!issue) {
+      res.status(404).render('not-found', { message: 'No issue with that number.' });
+      return;
+    }
+    const back = `/projects/${project.key}/issues/${issue.number}?from=${encodeURIComponent(
+      safeReturnTo(req.body?.returnTo, `/projects/${project.key}/board`),
+    )}`;
+    try {
+      await addComment({ issueId: issue.id, authorId: req.user!.id, body: String(req.body?.body ?? '') });
+      res.redirect(`${back}#comments`);
+    } catch (error) {
+      if (error instanceof AppError) {
+        const [members, comments] = await Promise.all([listMembers(project.id), listComments(issue.id)]);
+        res.status(httpStatusFor[error.code]).render('tracker/issue', {
+          project, issue, members, comments, active: 'projects',
+          error: error.message, editingComment: '',
+          returnTo: safeReturnTo(req.body?.returnTo, `/projects/${project.key}/board`),
+        });
+        return;
+      }
+      throw error;
+    }
+  }));
+
+  app.post('/projects/:key/issues/:number/comments/:commentId', requireUser, asyncRoute(async (req, res) => {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    const back = `/projects/${project.key}/issues/${req.params.number}`;
+    const action = String(req.body?.action ?? 'edit');
+    try {
+      if (action === 'delete') {
+        await deleteComment(String(req.params.commentId), req.user!.id);
+      } else {
+        await editComment({
+          commentId: String(req.params.commentId),
+          authorId: req.user!.id,
+          body: String(req.body?.body ?? ''),
+        });
+      }
+      res.redirect(`${back}#comments`);
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(httpStatusFor[error.code]).render('not-found', { message: error.message });
         return;
       }
       throw error;

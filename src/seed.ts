@@ -4,6 +4,7 @@ import { createUser, getDemoUser, type User } from './accounts.js';
 import { createBoard, createCard, getBoardState, getDemoBoard, toggleVote, type Board } from './boards.js';
 import { pool } from './db.js';
 import {
+  addComment,
   addMember,
   createIssue,
   createProject,
@@ -171,6 +172,26 @@ export async function seedDemoWorkspace(): Promise<User> {
     if (seed.priority === 'urgent' && seed.status !== 'backlog') {
       await updateIssue({ issueId: created.id, patch: { assigneeId: demo.id } });
     }
+  }
+
+  // A couple of real conversations, so the issue page shows what it is for.
+  const [firstIssue] = await import('./tracker.js').then((m) => m.listIssues(payments.id, { status: 'in_progress' }));
+  if (firstIssue) {
+    await addComment({
+      issueId: firstIssue.id,
+      authorId: team[0]!.id,
+      body: 'Reproduced on staging with 4000000000000002. The gateway returns a 402 and we swallow it in the catch — the form just re-renders with no message.',
+    });
+    await addComment({
+      issueId: firstIssue.id,
+      authorId: demo.id,
+      body: 'Good find. Let us surface the gateway message where it is safe to show, and a generic "your card was declined" otherwise. We should not leak the decline code to the customer.',
+    });
+    await addComment({
+      issueId: firstIssue.id,
+      authorId: team[2]!.id,
+      body: 'Worth logging the decline reason on our side either way — support keep asking and we currently have nothing to tell them.',
+    });
   }
 
   const website = await createProject({

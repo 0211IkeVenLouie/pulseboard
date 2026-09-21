@@ -602,3 +602,90 @@ export async function projectStats(projectId: string, userId: string): Promise<P
 
   return { project: toProject(project!), total, byStatus, byPriority, unassigned, mine };
 }
+
+
+/* -------------------------------------------------------------- comments */
+
+export interface Comment {
+  id: string;
+  issueId: string;
+  authorId: string | null;
+  authorName: string;
+  body: string;
+  createdAt: Date;
+  editedAt: Date | null;
+}
+
+interface CommentRow {
+  id: string; issue_id: string; author_id: string | null; author_name: string | null;
+  body: string; created_at: Date; edited_at: Date | null;
+}
+
+const toComment = (r: CommentRow): Comment => ({
+  id: r.id,
+  issueId: r.issue_id,
+  authorId: r.author_id,
+  // A comment outlives the account that wrote it; the words still matter.
+  authorName: r.author_name ?? 'Former member',
+  body: r.body,
+  createdAt: r.created_at,
+  editedAt: r.edited_at,
+});
+
+export async function listComments(issueId: string): Promise<Comment[]> {
+  const rows = await query<CommentRow>(
+    `SELECT c.id, c.issue_id, c.author_id, u.name AS author_name, c.body, c.created_at, c.edited_at
+       FROM comments c LEFT JOIN users u ON u.id = c.author_id
+      WHERE c.issue_id = $1 ORDER BY c.created_at`,
+    [issueId],
+  );
+  return rows.map(toComment);
+}
+
+export async function addComment(input: { issueId: string; authorId: string; body: string }): Promise<Comment> {
+  const body = input.body.trim().slice(0, 4000);
+  if (!body) throw new AppError('INVALID', 'Write something first.');
+  const row = await one<CommentRow>(
+    `WITH inserted AS (
+       INSERT INTO comments (issue_id, author_id, body) VALUES ($1, $2, $3)
+       RETURNING id, issue_id, author_id, body, created_at, edited_at
+     )
+     SELECT i.*, u.name AS author_name FROM inserted i LEFT JOIN users u ON u.id = i.author_id`,
+    [input.issueId, input.authorId, body],
+  );
+  return toComment(row!);
+}
+
+/** Only the author may change or remove their own comment. */
+export async function editComment(input: { commentId: string; authorId: string; body: string }): Promise<Comment> {
+  const body = input.body.trim().slice(0, 4000);
+  if (!body) throw new AppError('INVALID', 'A comment cannot be empty. Delete it instead.');
+  const row = await one<CommentRow>(
+    `WITH updated AS (
+       UPDATE comments SET body = $3, edited_at = now()
+        WHERE id = $1 AND author_id = $2
+        RETURNING id, issue_id, author_id, body, created_at, edited_at
+     )
+     SELECT u.*, usr.name AS author_name FROM updated u LEFT JOIN users usr ON usr.id = u.author_id`,
+    [input.commentId, input.authorId, body],
+  );
+  if (!row) throw new AppError('FORBIDDEN', 'You can only edit your own comments.');
+  return toComment(row);
+}
+
+export async function deleteComment(commentId: string, authorId: string): Promise<void> {
+  const deleted = await query('DELETE FROM comments WHERE id = $1 AND author_id = $2 RETURNING id', [
+    commentId,
+    authorId,
+  ]);
+  if (deleted.length === 0) throw new AppError('FORBIDDEN', 'You can only delete your own comments.');
+}
+
+export async function countComments(issueIds: string[]): Promise<Map<string, number>> {
+  if (issueIds.length === 0) return new Map();
+  const rows = await query<{ issue_id: string; count: number }>(
+    'SELECT issue_id, COUNT(*)::int AS count FROM comments WHERE issue_id = ANY($1::uuid[]) GROUP BY issue_id',
+    [issueIds],
+  );
+  return new Map(rows.map((row) => [row.issue_id, row.count]));
+}

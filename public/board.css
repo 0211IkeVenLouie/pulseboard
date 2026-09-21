@@ -464,3 +464,90 @@
   100% { box-shadow: var(--shadow-sm); }
 }
 .back-link { font-weight: 560; }
+
+/* ------------------------------------------------------- the issue page */
+
+.issue-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+@media (max-width: 900px) { .issue-layout { grid-template-columns: 1fr; } }
+
+.issue-title-input {
+  font-size: 1.45rem;
+  font-weight: 640;
+  letter-spacing: -0.024em;
+  border-color: transparent;
+  background: transparent;
+  padding: 6px 10px;
+  margin: 0 0 8px -10px;
+  width: calc(100% + 10px);
+}
+.issue-title-input:hover { border-color: var(--line); background: var(--surface); }
+
+.block-label {
+  font-size: 0.82rem;
+  font-weight: 640;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 22px 0 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.count-pill {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.issue-description { line-height: 1.6; }
+
+.side-card { padding: 16px; }
+.side-card .field { margin-bottom: 13px; }
+.side-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 16px 2px;
+  font-size: 0.87rem;
+}
+.side-meta dt { color: var(--ink-muted); }
+.side-meta dd { margin: 0; }
+
+/* Comments ---------------------------------------------------------------- */
+
+.comment-list { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.comment { display: flex; gap: 12px; }
+.comment-body { flex: 1; min-width: 0; }
+.comment-meta { margin: 0 0 4px; font-size: 0.86rem; color: var(--ink-muted); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.comment-meta strong { color: var(--ink); font-weight: 600; }
+.comment-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  line-height: 1.55;
+}
+.comment-actions { margin: 6px 0 0; font-size: 0.83rem; display: flex; gap: 8px; align-items: center; }
+/* The delete control is a form (it posts), so it needs to behave as an inline
+   flex item rather than a block that pushes itself onto its own line. */
+.comment-actions form { display: inline-flex; margin: 0; }
+.comment:target .comment-text { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.83rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+.link-button:hover { text-decoration: underline; }
+
+.comment-form { display: flex; gap: 12px; align-items: flex-start; margin-top: 4px; }

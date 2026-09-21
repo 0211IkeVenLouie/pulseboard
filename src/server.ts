@@ -9,6 +9,7 @@ import { env } from './env.js';
 import { migrate } from './migrate.js';
 import { normaliseIdentity } from './identity.js';
 import { attachRealtime } from './realtime.js';
+import { absoluteTime, initialsOf, relativeTime } from './relative-time.js';
 import { registerTrackerApi } from './tracker-json.js';
 import { registerTrackerRoutes, userMiddleware } from './tracker-routes.js';
 import { seedDemoBoard, seedDemoWorkspace } from './seed.js';
@@ -35,6 +36,10 @@ export function createApp(): express.Express {
     res.locals.identity = identity;
     next();
   });
+
+  app.locals.relativeTime = relativeTime;
+  app.locals.absoluteTime = absoluteTime;
+  app.locals.initialsOf = initialsOf;
 
   registerTrackerApi(app);
   registerTrackerRoutes(app);

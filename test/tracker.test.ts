@@ -5,8 +5,14 @@ import { authenticate, createUser, type User } from '../src/accounts.js';
 import { createBoard } from '../src/boards.js';
 import { safeReturnTo } from '../src/tracker-routes.js';
 import { AppError } from '../src/errors.js';
+import { initialsOf, relativeTime } from '../src/relative-time.js';
 import {
+  addComment,
   createIssue,
+  deleteComment,
+  deleteIssue,
+  editComment,
+  listComments,
   createProject,
   getIssue,
   listAssignedTo,
@@ -254,4 +260,73 @@ test('a return path is only honoured when it is same-site', async () => {
   assert.equal(safeReturnTo('javascript:alert(1)', '/fallback'), '/fallback');
   assert.equal(safeReturnTo(undefined, '/fallback'), '/fallback');
   assert.equal(safeReturnTo(42, '/fallback'), '/fallback');
+});
+
+test('comments: added, listed oldest first, and attributed', async () => {
+  const { lead, dev, project } = await seed();
+  const issue = await createIssue({ project, title: 'Needs discussion', reporter: lead });
+
+  await addComment({ issueId: issue.id, authorId: lead.id, body: '  Reproduced on staging.  ' });
+  await addComment({ issueId: issue.id, authorId: dev.id, body: 'Looks like the catch swallows it.' });
+
+  const comments = await listComments(issue.id);
+  assert.equal(comments.length, 2);
+  assert.deepEqual(comments.map((c) => c.authorName), ['Priya Raman', 'Marcus Webb']);
+  assert.equal(comments[0]!.body, 'Reproduced on staging.', 'whitespace is trimmed');
+  assert.equal(comments[0]!.editedAt, null);
+  assert.ok(comments[0]!.createdAt <= comments[1]!.createdAt, 'oldest first');
+});
+
+test('an empty comment is refused', async () => {
+  const { lead, project } = await seed();
+  const issue = await createIssue({ project, title: 'Needs discussion', reporter: lead });
+  await assert.rejects(
+    () => addComment({ issueId: issue.id, authorId: lead.id, body: '   ' }),
+    (error: AppError) => error.code === 'INVALID',
+  );
+  assert.equal((await listComments(issue.id)).length, 0);
+});
+
+test('only the author can edit or delete their own comment', async () => {
+  const { lead, dev, project } = await seed();
+  const issue = await createIssue({ project, title: 'Needs discussion', reporter: lead });
+  const mine = await addComment({ issueId: issue.id, authorId: lead.id, body: 'Mine' });
+
+  await assert.rejects(
+    () => editComment({ commentId: mine.id, authorId: dev.id, body: 'Not yours to change' }),
+    (error: AppError) => error.code === 'FORBIDDEN',
+  );
+  await assert.rejects(
+    () => deleteComment(mine.id, dev.id),
+    (error: AppError) => error.code === 'FORBIDDEN',
+  );
+  assert.equal((await listComments(issue.id))[0]!.body, 'Mine', 'nothing changed');
+
+  const edited = await editComment({ commentId: mine.id, authorId: lead.id, body: 'Mine, revised' });
+  assert.equal(edited.body, 'Mine, revised');
+  assert.ok(edited.editedAt, 'an edit is marked as such');
+
+  await deleteComment(mine.id, lead.id);
+  assert.equal((await listComments(issue.id)).length, 0);
+});
+
+test('deleting an issue takes its comments with it', async () => {
+  const { lead, project } = await seed();
+  const issue = await createIssue({ project, title: 'Doomed', reporter: lead });
+  await addComment({ issueId: issue.id, authorId: lead.id, body: 'Something' });
+  await deleteIssue(project.id, issue.id);
+  assert.equal((await listComments(issue.id)).length, 0);
+});
+
+test('relative time reads the way people say it', () => {
+  const now = new Date('2026-09-21T12:00:00Z');
+  const ago = (ms: number) => relativeTime(new Date(now.getTime() - ms), now);
+  assert.equal(ago(10 * 1000), 'just now');
+  assert.equal(ago(5 * 60 * 1000), '5 minutes ago');
+  assert.equal(ago(60 * 60 * 1000), '1 hour ago');
+  assert.equal(ago(26 * 60 * 60 * 1000), 'yesterday');
+  assert.equal(ago(3 * 24 * 60 * 60 * 1000), '3 days ago');
+  assert.match(ago(40 * 24 * 60 * 60 * 1000), /Aug/);
+  assert.equal(initialsOf('Priya Raman'), 'PR');
+  assert.equal(initialsOf('madonna'), 'M');
 });
