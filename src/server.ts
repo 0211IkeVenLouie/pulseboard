@@ -9,6 +9,7 @@ import { env } from './env.js';
 import { migrate } from './migrate.js';
 import { normaliseIdentity } from './identity.js';
 import { attachRealtime } from './realtime.js';
+import { computeAssetVersion } from './asset-version.js';
 import { absoluteTime, initialsOf, relativeTime } from './relative-time.js';
 import { registerTrackerApi } from './tracker-json.js';
 import { registerTrackerRoutes, userMiddleware } from './tracker-routes.js';
@@ -22,7 +23,10 @@ export function createApp(): express.Express {
   app.set('views', path.join(rootDir, 'views'));
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
-  app.use(express.static(path.join(rootDir, 'public'), { maxAge: '1h' }));
+  // Assets are addressed with a ?v= fingerprint, so they can be cached hard
+  // and still update the instant a deploy changes them.
+  app.locals.assetVersion = computeAssetVersion(path.join(rootDir, 'public'));
+  app.use(express.static(path.join(rootDir, 'public'), { maxAge: '365d', immutable: true }));
   app.use(userMiddleware());
 
   // Anonymous rooms mean no signup, but people still need a stable identity so

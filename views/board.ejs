@@ -37,6 +37,6 @@
   id="bootstrap"
   type="application/json"><%- JSON.stringify({ slug: board.slug, kind: board.kind, identity }) %></script>
 <script src="/socket.io/socket.io.js"></script>
-<script src="/board.js" type="module"></script>
+<script src="/board.js?v=<%= assetVersion %>" type="module"></script>
 </body>
 </html>
