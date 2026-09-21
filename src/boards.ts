@@ -455,6 +455,41 @@ export async function setCardsHidden(boardId: string, hidden: boolean): Promise<
   return toBoard(row);
 }
 
+export async function renameColumn(board: Board, columnId: string, title: string): Promise<Column> {
+  const trimmed = title.trim().slice(0, 60);
+  if (!trimmed) throw new AppError('INVALID', 'A column needs a name.');
+  const row = await one<{ id: string; board_id: string; title: string; sort_key: string }>(
+    'UPDATE columns SET title = $3 WHERE id = $1 AND board_id = $2 RETURNING id, board_id, title, sort_key',
+    [columnId, board.id, trimmed],
+  );
+  if (!row) throw new AppError('NOT_FOUND', 'That column no longer exists.');
+  return { id: row.id, boardId: row.board_id, title: row.title, sortKey: row.sort_key };
+}
+
+export async function renameBoard(boardId: string, title: string): Promise<Board> {
+  const trimmed = title.trim().slice(0, 120);
+  if (!trimmed) throw new AppError('INVALID', 'The board needs a name.');
+  const row = await one<BoardRow>(
+    `UPDATE boards SET title = $2 WHERE id = $1
+     RETURNING id, slug, title, kind, cards_hidden, is_demo`,
+    [boardId, trimmed],
+  );
+  if (!row) throw new AppError('NOT_FOUND', 'That board no longer exists.');
+  return toBoard(row);
+}
+
+export async function deleteColumn(board: Board, columnId: string): Promise<void> {
+  const remaining = await query<{ id: string }>('SELECT id FROM columns WHERE board_id = $1', [board.id]);
+  if (remaining.length <= 1) {
+    throw new AppError('INVALID', 'A board needs at least one column.');
+  }
+  const deleted = await query('DELETE FROM columns WHERE id = $1 AND board_id = $2 RETURNING id', [
+    columnId,
+    board.id,
+  ]);
+  if (deleted.length === 0) throw new AppError('NOT_FOUND', 'That column no longer exists.');
+}
+
 export async function addColumn(board: Board, title: string): Promise<Column> {
   const tail = await one<{ sort_key: string }>(
     'SELECT sort_key FROM columns WHERE board_id = $1 ORDER BY sort_key DESC LIMIT 1',

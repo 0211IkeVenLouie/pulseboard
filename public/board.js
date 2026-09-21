@@ -93,6 +93,7 @@ function render() {
   }
   renderPresence();
   renderRevealButton();
+  applyBoardTitle();
 }
 
 function buildColumn(column) {
@@ -103,9 +104,59 @@ function buildColumn(column) {
   const head = document.createElement('header');
   head.className = 'column-head';
   const title = document.createElement('span');
+  title.className = 'column-title';
+  title.title = 'Rename this column';
   const count = document.createElement('span');
   count.className = 'column-count';
-  head.append(title, count);
+
+  const actions = document.createElement('span');
+  actions.className = 'column-actions';
+  const rename = document.createElement('button');
+  rename.className = 'pcard-btn';
+  rename.type = 'button';
+  rename.textContent = '✎';
+  rename.title = 'Rename column';
+  rename.setAttribute('aria-label', `Rename the ${column.title} column`);
+  const removeColumn = document.createElement('button');
+  removeColumn.className = 'pcard-btn pcard-del';
+  removeColumn.type = 'button';
+  removeColumn.textContent = '×';
+  removeColumn.title = 'Delete column';
+  removeColumn.setAttribute('aria-label', `Delete the ${column.title} column`);
+
+  const doRename = async () => {
+    const next = window.prompt('Column name', column.title);
+    if (next === null || !next.trim() || next.trim() === column.title) return;
+    const response = await emit('column:rename', { columnId: column.id, title: next.trim() });
+    if (response?.ok) {
+      const index = state.columns.findIndex((c) => c.id === column.id);
+      if (index !== -1) state.columns[index] = response.column;
+      render();
+    } else {
+      toast(response?.message ?? 'Could not rename that column.', 'warn');
+    }
+  };
+  rename.addEventListener('click', doRename);
+  title.addEventListener('dblclick', doRename);
+
+  removeColumn.addEventListener('click', async () => {
+    const cardCount = cardsIn(column.id).length;
+    const warning = cardCount
+      ? `Delete “${column.title}” and its ${cardCount} card${cardCount === 1 ? '' : 's'}?`
+      : `Delete “${column.title}”?`;
+    if (!window.confirm(warning)) return;
+    const response = await emit('column:delete', { columnId: column.id });
+    if (response?.ok) {
+      state.columns = state.columns.filter((c) => c.id !== column.id);
+      state.cards = state.cards.filter((c) => c.columnId !== column.id);
+      render();
+    } else {
+      toast(response?.message ?? 'Could not delete that column.', 'warn');
+    }
+  });
+
+  actions.append(rename, removeColumn);
+  head.append(title, count, actions);
 
   const list = document.createElement('div');
   list.className = 'column-list';
@@ -192,15 +243,30 @@ function cardNode(card) {
   const author = document.createElement('span');
   author.textContent = card.authorName;
 
+  const actions = document.createElement('span');
+  actions.className = 'pcard-actions';
+
+  if (!card.masked) {
+    const edit = document.createElement('button');
+    edit.className = 'pcard-btn';
+    edit.type = 'button';
+    edit.textContent = '✎';
+    edit.title = 'Edit card (or double-click the text)';
+    edit.setAttribute('aria-label', 'Edit card');
+    edit.addEventListener('click', () => beginEdit(card, body, el));
+    actions.append(edit);
+  }
+
   const del = document.createElement('button');
-  del.className = 'pcard-del';
+  del.className = 'pcard-btn pcard-del';
   del.type = 'button';
   del.textContent = '×';
   del.title = 'Delete card';
   del.setAttribute('aria-label', 'Delete card');
   del.addEventListener('click', () => removeCard(card));
+  actions.append(del);
 
-  foot.append(vote, author, del);
+  foot.append(vote, author, actions);
   el.append(body, foot);
 
   el.addEventListener('dragstart', (event) => {
@@ -220,10 +286,11 @@ function renderPresence() {
   presenceEl.replaceChildren(
     ...state.members.slice(0, 6).map((member) => {
       const el = document.createElement('div');
-      el.className = 'avatar';
+      const isMe = member.id === state.you.id;
+      el.className = isMe ? 'avatar avatar-me' : 'avatar';
       el.style.background = member.color;
       el.textContent = initials(member.name);
-      el.title = member.id === state.you.id ? `${member.name} (you)` : member.name;
+      el.title = isMe ? `${member.name} (you) — click to rename` : member.name;
       return el;
     }),
   );
@@ -234,6 +301,12 @@ function renderPresence() {
     more.textContent = `+${state.members.length - 6}`;
     presenceEl.append(more);
   }
+}
+
+function applyBoardTitle() {
+  const heading = document.getElementById('board-title');
+  if (heading) heading.textContent = state.board.title;
+  document.title = `${state.board.title} — Pulseboard`;
 }
 
 function renderRevealButton() {
@@ -528,6 +601,18 @@ socket.on('card:deleted', ({ cardId }) => {
   render();
 });
 
+socket.on('column:updated', ({ column }) => {
+  const index = state.columns.findIndex((c) => c.id === column.id);
+  if (index !== -1) state.columns[index] = column;
+  render();
+});
+
+socket.on('column:deleted', ({ columnId }) => {
+  state.columns = state.columns.filter((c) => c.id !== columnId);
+  state.cards = state.cards.filter((c) => c.columnId !== columnId);
+  render();
+});
+
 socket.on('column:created', ({ column }) => {
   state.columns = [...state.columns, column];
   render();
@@ -554,6 +639,31 @@ revealBtn?.addEventListener('click', async () => {
     state.board = response.board;
     await join();
   }
+});
+
+document.getElementById('board-title')?.addEventListener('click', async () => {
+  const next = window.prompt('Board name', state.board.title);
+  if (next === null || !next.trim() || next.trim() === state.board.title) return;
+  const response = await emit('board:rename', { title: next.trim() });
+  if (response?.ok) {
+    state.board = response.board;
+    applyBoardTitle();
+  } else {
+    toast(response?.message ?? 'Could not rename the board.', 'warn');
+  }
+});
+
+/** Your display name is yours; nobody wants to be Eager Otter forever. */
+document.getElementById('presence').addEventListener('click', (event) => {
+  if (!event.target.closest('.avatar-me')) return;
+  const next = window.prompt('Your name on this board', state.you.name);
+  if (next === null || !next.trim() || next.trim() === state.you.name) return;
+  const name = next.trim().slice(0, 32);
+  document.cookie = `pb_name=${encodeURIComponent(name)};path=/;max-age=31536000;samesite=lax`;
+  socket.auth = { ...socket.auth, name };
+  // The server reads identity from the handshake, so it needs a fresh one.
+  socket.disconnect().connect();
+  toast(`You are ${name} now.`);
 });
 
 document.getElementById('add-column').addEventListener('click', async () => {

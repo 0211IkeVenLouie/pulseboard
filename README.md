@@ -161,7 +161,7 @@ echo "DATABASE_URL=postgres://localhost:5432/pulseboard_test" > .env.test
 npm test
 ```
 
-The suite is 17 tests in two halves: property-ish tests for the ordering
+The suite is 18 tests in two halves: property-ish tests for the ordering
 algorithm (random interleaved inserts must never break lexicographic order or
 mint a duplicate), and integration tests that run genuinely concurrent moves
 through `Promise.all` against real Postgres to check that exactly one wins and
@@ -190,7 +190,8 @@ Worth naming, since a portfolio project that claims to be finished is lying:
   implementation.
 - **Single process.** Presence lives in memory; horizontal scaling needs the
   Redis adapter.
-- **No history.** Deleting a card deletes it.
+- **No history.** Deleting a card deletes it, and deleting a column takes its
+  cards with it.
 
 ## Licence
 

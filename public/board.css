@@ -4,7 +4,20 @@
   padding: 14px 0;
 }
 .board-head .wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: none; }
-.board-title { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+.board-title {
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 2px 8px;
+  margin-left: -8px;
+  color: inherit;
+  cursor: text;
+}
+.board-title:hover { border-color: var(--line); background: #fafafb; }
 
 .presence { display: flex; align-items: center; }
 .avatar {
@@ -59,6 +72,18 @@
   padding: 12px 14px 8px;
   font-weight: 600;
 }
+.column-title { cursor: text; border-radius: 6px; padding: 1px 4px; margin-left: -4px; }
+.column-title:hover { background: rgba(255, 255, 255, 0.75); }
+.column-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+/* Revealed on hover, but always reachable by keyboard. */
+.column:hover .column-actions,
+.column-actions:focus-within { opacity: 1; }
 .column-count { color: var(--ink-faint); font-weight: 500; font-size: 0.85rem; }
 .column-list { padding: 0 10px 10px; overflow-y: auto; flex: 1; min-height: 60px; }
 .column.drag-over { border-color: var(--accent); background: var(--accent-soft); }
@@ -103,8 +128,32 @@
   color: var(--ink-muted);
 }
 .vote[data-voted="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
-.pcard-del { margin-left: auto; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 0.95rem; padding: 0 4px; }
-.pcard-del:hover { color: var(--danger); }
+.pcard-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+/* Same idea on the cards: quiet until you look at them, never hidden from
+   the keyboard. Touch devices have no hover, so show them there always. */
+.pcard:hover .pcard-actions,
+.pcard-actions:focus-within { opacity: 1; }
+@media (hover: none) { .pcard-actions, .column-actions { opacity: 1; } }
+
+.pcard-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 5px;
+}
+.pcard-btn:hover { background: #eceef2; color: var(--ink); }
+.pcard-btn:focus-visible { outline: 2px solid var(--accent-ring); }
+.pcard-del:hover { color: var(--danger); background: #fdf3f2; }
 
 .composer textarea {
   width: 100%;

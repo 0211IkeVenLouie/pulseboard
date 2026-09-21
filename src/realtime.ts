@@ -2,6 +2,9 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import {
   addColumn,
+  deleteColumn,
+  renameBoard,
+  renameColumn,
   createCard,
   deleteCard,
   editCard,
@@ -182,6 +185,23 @@ export function attachRealtime(httpServer: HttpServer): Server {
     handler<{ hidden: boolean }>('board:hidden', async (s, payload) => {
       const board = await setCardsHidden(s.board.id, Boolean(payload?.hidden));
       return { ack: { board }, broadcast: ['board:updated', { board, resync: true }] };
+    });
+
+    handler<{ columnId: string; title: string }>('column:rename', async (s, payload) => {
+      const column = await renameColumn(s.board, String(payload?.columnId ?? ''), String(payload?.title ?? ''));
+      return { ack: { column }, broadcast: ['column:updated', { column }] };
+    });
+
+    handler<{ columnId: string }>('column:delete', async (s, payload) => {
+      const columnId = String(payload?.columnId ?? '');
+      await deleteColumn(s.board, columnId);
+      // Cards cascade with the column, so everyone has to resync their view.
+      return { ack: { columnId }, broadcast: ['column:deleted', { columnId, resync: true }] };
+    });
+
+    handler<{ title: string }>('board:rename', async (s, payload) => {
+      const board = await renameBoard(s.board.id, String(payload?.title ?? ''));
+      return { ack: { board }, broadcast: ['board:updated', { board }] };
     });
 
     handler<{ title: string }>('column:add', async (s, payload) => {

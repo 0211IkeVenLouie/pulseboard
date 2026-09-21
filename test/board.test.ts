@@ -5,9 +5,12 @@ import { closeDatabase, resetDatabase } from './helpers.js';
 import {
   createBoard,
   createCard,
+  deleteColumn,
   editCard,
   getBoardState,
   moveCard,
+  renameBoard,
+  renameColumn,
   setCardsHidden,
   toggleVote,
   type Board,
@@ -246,4 +249,32 @@ test('the database orders sort keys byte-wise, exactly as the client does', asyn
     [columnIds[0], 'V'],
   );
   assert.equal(above[0]?.sort_key, 'a', "the card after 'V' is 'a', not nothing");
+});
+
+test('columns and boards can be renamed, and a board keeps at least one column', async () => {
+  const { board, columnIds } = await seedBoard();
+
+  const renamed = await renameColumn(board, columnIds[0]!, '  Kept working  ');
+  assert.equal(renamed.title, 'Kept working', 'the title is trimmed');
+  const state = await getBoardState(board, ALICE.id);
+  assert.deepEqual(state.columns.map((c) => c.title), ['Kept working', 'To improve', 'Action items']);
+
+  await assert.rejects(() => renameColumn(board, columnIds[0]!, '   '), (e: AppError) => e.code === 'INVALID');
+
+  const retitled = await renameBoard(board.id, 'Sprint 13 retro');
+  assert.equal(retitled.title, 'Sprint 13 retro');
+
+  // Deleting a column takes its cards with it.
+  await createCard({ board, columnId: columnIds[2]!, body: 'doomed', ...author(ALICE) });
+  await deleteColumn(board, columnIds[2]!);
+  const afterDelete = await getBoardState(board, ALICE.id);
+  assert.equal(afterDelete.columns.length, 2);
+  assert.equal(afterDelete.cards.length, 0, 'the column took its cards with it');
+
+  // But the last one cannot go — a board with no columns has nowhere to drop.
+  await deleteColumn(board, columnIds[1]!);
+  await assert.rejects(
+    () => deleteColumn(board, columnIds[0]!),
+    (error: AppError) => error.code === 'INVALID' && /at least one column/.test(error.message),
+  );
 });
