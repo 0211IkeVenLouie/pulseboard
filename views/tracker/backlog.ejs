@@ -1,0 +1,53 @@
+<%- include('../partials/head', { title: project.name + ' backlog — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page">
+  <%- include('../partials/project-head', { project: project, starred: starred, view: view }) %>
+
+  <% var backlog = issues.filter(function (i) { return i.status === 'backlog'; });
+     var active_ = issues.filter(function (i) { return i.status !== 'backlog'; }); %>
+
+  <section>
+    <h2>Backlog <span class="muted small">· <%= backlog.length %></span></h2>
+    <% if (backlog.length === 0) { %>
+      <div class="empty"><strong>The backlog is empty.</strong> Anything you add below lands here until you move it onto the board.</div>
+    <% } else { %>
+      <div class="rows">
+        <% backlog.forEach(function (issue) { %><%- include('../partials/issue-row', { issue: issue }) %><% }) %>
+      </div>
+    <% } %>
+
+    <form method="post" action="/projects/<%= project.key %>/issues" class="card" style="margin-top: 16px;">
+      <input type="hidden" name="status" value="backlog" />
+      <div class="field">
+        <label for="title">Add to the backlog</label>
+        <input type="text" id="title" name="title" placeholder="Something we should do eventually" maxlength="200" required />
+      </div>
+      <div class="row">
+        <select name="type" aria-label="Type" style="max-width: 130px;">
+          <option value="task">Task</option><option value="bug">Bug</option><option value="story">Story</option>
+        </select>
+        <select name="priority" aria-label="Priority" style="max-width: 140px;">
+          <option value="low">Low</option><option value="medium" selected>Medium</option>
+          <option value="high">High</option><option value="urgent">Urgent</option>
+        </select>
+        <select name="assigneeId" aria-label="Assignee" style="max-width: 190px;">
+          <option value="">Unassigned</option>
+          <% members.forEach(function (m) { %><option value="<%= m.id %>"><%= m.name %></option><% }) %>
+        </select>
+        <button class="btn btn-primary" type="submit">Add issue</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="section">
+    <h2>On the board <span class="muted small">· <%= active_.length %></span></h2>
+    <% if (active_.length === 0) { %>
+      <div class="empty"><strong>Nothing on the board.</strong></div>
+    <% } else { %>
+      <div class="rows">
+        <% active_.forEach(function (issue) { %><%- include('../partials/issue-row', { issue: issue }) %><% }) %>
+      </div>
+    <% } %>
+  </section>
+</main>
+</body></html>

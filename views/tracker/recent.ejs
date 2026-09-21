@@ -1,0 +1,20 @@
+<%- include('../partials/head', { title: 'Recent — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page narrow">
+  <div class="page-head"><h1>Recent</h1></div>
+  <% if (items.length === 0) { %>
+    <div class="empty"><strong>Nothing here yet.</strong> Projects, boards and issues you open are listed here, newest first.</div>
+  <% } else { %>
+    <div class="rows">
+      <% items.forEach(function (item) { %>
+        <a class="issue-row" href="<%= item.href %>">
+          <span class="itype"><%= item.entityType === 'project' ? '▣' : item.entityType === 'board' ? '▦' : '▪' %></span>
+          <span class="ititle"><%= item.title %></span>
+          <span class="spacer"></span>
+          <span class="istatus"><%= item.subtitle %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</main>
+</body></html>

@@ -161,7 +161,7 @@ echo "DATABASE_URL=postgres://localhost:5432/pulseboard_test" > .env.test
 npm test
 ```
 
-The suite is 18 tests in two halves: property-ish tests for the ordering
+The suite is 33 tests in three groups: property-ish tests for the ordering
 algorithm (random interleaved inserts must never break lexicographic order or
 mint a duplicate), and integration tests that run genuinely concurrent moves
 through `Promise.all` against real Postgres to check that exactly one wins and

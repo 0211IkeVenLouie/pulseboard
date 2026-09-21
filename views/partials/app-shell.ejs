@@ -1,0 +1,21 @@
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a>
+    <% if (user) { %>
+      <nav class="appnav">
+        <a href="/for-you" class="<%= active === 'for-you' ? 'active' : '' %>">For you</a>
+        <a href="/recent" class="<%= active === 'recent' ? 'active' : '' %>">Recent</a>
+        <a href="/starred" class="<%= active === 'starred' ? 'active' : '' %>">Starred</a>
+        <a href="/dashboards" class="<%= active === 'dashboards' ? 'active' : '' %>">Dashboards</a>
+        <a href="/projects" class="<%= active === 'projects' ? 'active' : '' %>">Projects</a>
+      </nav>
+    <% } %>
+    <span class="spacer"></span>
+    <% if (user) { %>
+      <span class="small muted"><%= user.name %></span>
+      <form method="post" action="/signout"><button class="btn btn-sm btn-ghost" type="submit">Sign out</button></form>
+    <% } else { %>
+      <a class="btn btn-sm" href="/signin">Sign in</a>
+    <% } %>
+  </div>
+</header>

@@ -1,0 +1,14 @@
+<div class="page-head">
+  <h1><%= project.name %></h1>
+  <span class="badge badge-quiet"><%= project.key %></span>
+  <form method="post" action="/projects/<%= project.key %>/star">
+    <button class="btn btn-sm btn-ghost" type="submit" title="<%= starred ? 'Remove from Starred' : 'Add to Starred' %>">
+      <%= starred ? '★ Starred' : '☆ Star' %>
+    </button>
+  </form>
+  <span class="spacer"></span>
+  <div class="tabs">
+    <a href="/projects/<%= project.key %>/board" class="<%= view === 'board' ? 'active' : '' %>">Board</a>
+    <a href="/projects/<%= project.key %>/backlog" class="<%= view === 'backlog' ? 'active' : '' %>">Backlog</a>
+  </div>
+</div>

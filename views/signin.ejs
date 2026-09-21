@@ -1,0 +1,17 @@
+<%- include('partials/head', { title: 'Sign in — Pulseboard' }) %>
+<%- include('partials/app-shell', { active: '' }) %>
+<main class="wrap page narrow" style="max-width: 420px;">
+  <h1>Sign in</h1>
+  <% if (error) { %><div class="notice"><%= error %></div><% } %>
+  <form method="post" action="/signin" class="card">
+    <input type="hidden" name="next" value="<%= next %>" />
+    <div class="field"><label for="email">Email</label>
+      <input type="email" id="email" name="email" value="<%= email %>" required autofocus /></div>
+    <div class="field"><label for="password">Password</label>
+      <input type="password" id="password" name="password" required /></div>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+  </form>
+  <p class="hint">No account? <a href="/signup">Create one</a>, or</p>
+  <form method="post" action="/demo-signin"><button class="btn" type="submit">Try the demo workspace →</button></form>
+</main>
+</body></html>

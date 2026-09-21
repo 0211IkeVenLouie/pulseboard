@@ -1,0 +1,58 @@
+<%- include('../partials/head', { title: 'Dashboards — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page">
+  <div class="page-head"><h1>Dashboards</h1></div>
+  <% if (stats.length === 0) { %>
+    <div class="empty"><strong>No projects to report on yet.</strong>
+      <div style="margin-top:12px;"><a class="btn btn-primary" href="/projects">Create a project</a></div>
+    </div>
+  <% } else { %>
+    <% stats.forEach(function (s) { %>
+      <section class="card" style="margin-bottom: 18px;">
+        <div class="row" style="margin-bottom: 16px;">
+          <h2 style="margin:0;"><%= s.project.name %></h2>
+          <span class="badge badge-quiet"><%= s.project.key %></span>
+          <span class="spacer"></span>
+          <a class="btn btn-sm" href="/projects/<%= s.project.key %>/board">Open board</a>
+        </div>
+
+        <div class="summary">
+          <div class="stat"><div class="label">Total issues</div><div class="value"><%= s.total %></div></div>
+          <div class="stat"><div class="label">Assigned to you</div><div class="value"><%= s.mine %></div></div>
+          <div class="stat"><div class="label">Unassigned</div><div class="value"><%= s.unassigned %></div></div>
+          <div class="stat"><div class="label">Done</div><div class="value"><%= s.byStatus.done %></div></div>
+        </div>
+
+        <% if (s.total > 0) { %>
+          <h3 style="margin-top: 8px;">By status</h3>
+          <div class="meter" role="img"
+               aria-label="<%= ALL_STATUSES.map(function (k) { return s.byStatus[k] + ' ' + STATUS_LABELS[k]; }).join(', ') %>">
+            <% ALL_STATUSES.forEach(function (key, i) { if (s.byStatus[key] === 0) return; %>
+              <span class="meter-part meter-<%= i %>" style="flex: <%= s.byStatus[key] %>"
+                    title="<%= STATUS_LABELS[key] %>: <%= s.byStatus[key] %>"></span>
+            <% }) %>
+          </div>
+          <div class="legend">
+            <% ALL_STATUSES.forEach(function (key, i) { %>
+              <span class="legend-item"><i class="swatch meter-<%= i %>"></i><%= STATUS_LABELS[key] %>
+                <b><%= s.byStatus[key] %></b></span>
+            <% }) %>
+          </div>
+
+          <h3 style="margin-top: 20px;">By priority</h3>
+          <div class="legend">
+            <% ['urgent','high','medium','low'].forEach(function (key) { %>
+              <span class="legend-item">
+                <span class="prio prio-<%= key %>"><%= PRIORITY_LABELS[key] %></span>
+                <b><%= s.byPriority[key] %></b>
+              </span>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p class="muted">No issues in this project yet.</p>
+        <% } %>
+      </section>
+    <% }) %>
+  <% } %>
+</main>
+</body></html>

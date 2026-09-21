@@ -1,0 +1,18 @@
+<%- include('partials/head', { title: 'Create an account — Pulseboard' }) %>
+<%- include('partials/app-shell', { active: '' }) %>
+<main class="wrap page narrow" style="max-width: 440px;">
+  <h1>Create an account</h1>
+  <p class="muted">You only need one for projects and issues. Retro boards stay anonymous.</p>
+  <% if (error) { %><div class="notice"><%= error %></div><% } %>
+  <form method="post" action="/signup" class="card">
+    <div class="field"><label for="name">Your name</label>
+      <input type="text" id="name" name="name" value="<%= values.name %>" required autofocus /></div>
+    <div class="field"><label for="email">Email</label>
+      <input type="email" id="email" name="email" value="<%= values.email %>" required /></div>
+    <div class="field"><label for="password">Password</label>
+      <input type="password" id="password" name="password" minlength="8" required />
+      <p class="hint">At least 8 characters.</p></div>
+    <button class="btn btn-primary" type="submit">Create account</button>
+  </form>
+</main>
+</body></html>

@@ -1,0 +1,47 @@
+<%- include('../partials/head', { title: 'Projects — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page">
+  <div class="page-head"><h1>Projects</h1></div>
+  <% if (error) { %><div class="notice"><%= error %></div><% } %>
+
+  <div class="grid-2">
+    <div>
+      <% if (projects.length === 0) { %>
+        <div class="empty"><strong>No projects yet.</strong> Create one on the right.</div>
+      <% } else { %>
+        <div class="rows">
+          <% projects.forEach(function (project) { %>
+            <a class="issue-row" href="/projects/<%= project.key %>/board">
+              <span class="ikey"><%= project.key %></span>
+              <span class="ititle"><%= project.name %></span>
+              <span class="spacer"></span>
+              <span class="istatus"><%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h2>New project</h2>
+      <form method="post" action="/projects">
+        <div class="field">
+          <label for="key">Key</label>
+          <input type="text" id="key" name="key" placeholder="PAY" maxlength="10" required
+                 style="text-transform: uppercase; max-width: 140px;" />
+          <p class="hint">2–10 letters or digits. Issues become PAY-1, PAY-2 and so on.</p>
+        </div>
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Payments" required />
+        </div>
+        <div class="field">
+          <label for="description">Description</label>
+          <input type="text" id="description" name="description" placeholder="Checkout, refunds and payouts." />
+        </div>
+        <button class="btn btn-primary" type="submit">Create project</button>
+      </form>
+    </div>
+  </div>
+</main>
+</body></html>

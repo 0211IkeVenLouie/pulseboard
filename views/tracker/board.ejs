@@ -1,0 +1,44 @@
+<%- include('../partials/head', { title: project.name + ' board — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page" style="max-width: none;">
+  <%- include('../partials/project-head', { project: project, starred: starred, view: view }) %>
+
+  <div class="issue-board" id="issue-board" data-project="<%= project.key %>">
+    <% BOARD_STATUSES.forEach(function (status, index) {
+         var inColumn = issues.filter(function (i) { return i.status === status; }); %>
+      <section class="column" data-status="<%= status %>" style="--column-hue: var(--hue-<%= index + 1 %>)">
+        <header class="column-head">
+          <span class="column-title"><%= STATUS_LABELS[status] %></span>
+          <span class="column-count"><%= inColumn.length %></span>
+        </header>
+        <div class="column-list" data-status="<%= status %>">
+          <% if (inColumn.length === 0) { %>
+            <p class="faint small" style="padding: 6px 4px 10px;">Nothing in <%= STATUS_LABELS[status].toLowerCase() %>.</p>
+          <% } %>
+          <% inColumn.forEach(function (issue) { %>
+            <article class="icard" draggable="true" data-issue="<%= issue.id %>" data-version="<%= issue.version %>">
+              <a class="icard-title" href="/projects/<%= project.key %>/issues/<%= issue.number %>"><%= issue.title %></a>
+              <div class="icard-foot">
+                <span class="itype itype-<%= issue.type %>"><%= issue.type === 'bug' ? '●' : issue.type === 'story' ? '◆' : '▪' %></span>
+                <span class="ikey"><%= issue.key %></span>
+                <span class="prio prio-<%= issue.priority %>"><%= PRIORITY_LABELS[issue.priority] %></span>
+                <span class="spacer"></span>
+                <% if (issue.assigneeName) { %>
+                  <span class="mini-avatar" title="<%= issue.assigneeName %>"><%= issue.assigneeName.split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2) %></span>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+        <form class="composer" method="post" action="/projects/<%= project.key %>/issues" style="padding: 0 11px 12px;">
+          <input type="hidden" name="status" value="<%= status %>" />
+          <input type="text" name="title" placeholder="Add an issue…" maxlength="200" required
+                 style="border-style: dashed; background: transparent;" />
+        </form>
+      </section>
+    <% }) %>
+  </div>
+</main>
+<div class="toasts" id="toasts"></div>
+<script src="/issue-board.js" type="module"></script>
+</body></html>

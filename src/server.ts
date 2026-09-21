@@ -9,7 +9,9 @@ import { env } from './env.js';
 import { migrate } from './migrate.js';
 import { normaliseIdentity } from './identity.js';
 import { attachRealtime } from './realtime.js';
-import { seedDemoBoard } from './seed.js';
+import { registerTrackerApi } from './tracker-json.js';
+import { registerTrackerRoutes, userMiddleware } from './tracker-routes.js';
+import { seedDemoBoard, seedDemoWorkspace } from './seed.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -20,6 +22,7 @@ export function createApp(): express.Express {
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
   app.use(express.static(path.join(rootDir, 'public'), { maxAge: '1h' }));
+  app.use(userMiddleware());
 
   // Anonymous rooms mean no signup, but people still need a stable identity so
   // their cursor, votes and "hidden until reveal" cards survive a refresh.
@@ -32,6 +35,9 @@ export function createApp(): express.Express {
     res.locals.identity = identity;
     next();
   });
+
+  registerTrackerApi(app);
+  registerTrackerRoutes(app);
 
   app.get('/healthz', async (_req, res) => {
     try {
@@ -81,7 +87,10 @@ export function createApp(): express.Express {
 export async function start(): Promise<void> {
   const applied = await migrate();
   if (applied.length) console.log(`Applied migrations: ${applied.join(', ')}`);
-  if (env.seedDemo) await seedDemoBoard();
+  if (env.seedDemo) {
+    await seedDemoBoard();
+    await seedDemoWorkspace();
+  }
 
   const app = createApp();
   const server = createServer(app);

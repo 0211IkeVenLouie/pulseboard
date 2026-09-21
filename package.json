@@ -13,7 +13,7 @@
     "start": "node --env-file-if-exists=.env dist/server.js",
     "migrate": "tsx --env-file-if-exists=.env src/migrate.ts",
     "seed": "tsx --env-file-if-exists=.env src/seed.ts",
-    "test": "node --env-file-if-exists=.env.test --import tsx --test test/*.test.ts",
+    "test": "node --env-file-if-exists=.env.test --test-concurrency=1 --import tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -1,0 +1,71 @@
+<%- include('../partials/head', { title: issue.key + ' — ' + issue.title }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page narrow" style="max-width: 760px;">
+  <p class="small muted" style="margin-bottom: 6px;">
+    <a href="/projects/<%= project.key %>/board"><%= project.name %></a> ·
+    <a href="/projects/<%= project.key %>/backlog">Backlog</a>
+  </p>
+  <div class="page-head">
+    <span class="ikey" style="font-size: 1rem;"><%= issue.key %></span>
+    <h1 style="font-size: 1.4rem;"><%= issue.title %></h1>
+  </div>
+  <% if (error) { %><div class="notice"><%= error %></div><% } %>
+
+  <form method="post" action="/projects/<%= project.key %>/issues/<%= issue.number %>" class="card">
+    <input type="hidden" name="version" value="<%= issue.version %>" />
+    <div class="field">
+      <label for="title">Title</label>
+      <input type="text" id="title" name="title" value="<%= issue.title %>" maxlength="200" required />
+    </div>
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="6" placeholder="What is the problem, and how would you know it is fixed?"><%= issue.description %></textarea>
+    </div>
+    <div class="row" style="flex-wrap: wrap;">
+      <div class="field" style="flex: 1; min-width: 140px;">
+        <label for="type">Type</label>
+        <select id="type" name="type">
+          <% ['task','bug','story'].forEach(function (t) { %>
+            <option value="<%= t %>" <%= issue.type === t ? 'selected' : '' %>><%= TYPE_LABELS[t] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field" style="flex: 1; min-width: 140px;">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <% ALL_STATUSES.forEach(function (s) { %>
+            <option value="<%= s %>" <%= issue.status === s ? 'selected' : '' %>><%= STATUS_LABELS[s] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field" style="flex: 1; min-width: 140px;">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority">
+          <% ['low','medium','high','urgent'].forEach(function (p) { %>
+            <option value="<%= p %>" <%= issue.priority === p ? 'selected' : '' %>><%= PRIORITY_LABELS[p] %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field" style="flex: 1; min-width: 170px;">
+        <label for="assigneeId">Assignee</label>
+        <select id="assigneeId" name="assigneeId">
+          <option value="">Unassigned</option>
+          <% members.forEach(function (m) { %>
+            <option value="<%= m.id %>" <%= issue.assigneeId === m.id ? 'selected' : '' %>><%= m.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" type="submit">Save changes</button>
+      <span class="spacer"></span>
+      <span class="small faint">Reported by <%= issue.reporterName || 'someone' %></span>
+    </div>
+  </form>
+
+  <form method="post" action="/projects/<%= project.key %>/issues/<%= issue.number %>/delete"
+        onsubmit="return confirm('Delete <%= issue.key %>?');" style="margin-top: 14px;">
+    <button class="btn btn-sm btn-ghost" type="submit">Delete issue</button>
+  </form>
+</main>
+</body></html>

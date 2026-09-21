@@ -1,0 +1,13 @@
+<a class="issue-row" href="/projects/<%= issue.projectKey %>/issues/<%= issue.number %>">
+  <span class="itype itype-<%= issue.type %>" title="<%= TYPE_LABELS[issue.type] %>"><%= issue.type === 'bug' ? '●' : issue.type === 'story' ? '◆' : '▪' %></span>
+  <span class="ikey"><%= issue.key %></span>
+  <span class="ititle"><%= issue.title %></span>
+  <span class="spacer"></span>
+  <span class="prio prio-<%= issue.priority %>"><%= PRIORITY_LABELS[issue.priority] %></span>
+  <span class="istatus"><%= STATUS_LABELS[issue.status] %></span>
+  <% if (issue.assigneeName) { %>
+    <span class="mini-avatar" title="<%= issue.assigneeName %>"><%= issue.assigneeName.split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2) %></span>
+  <% } else { %>
+    <span class="mini-avatar mini-avatar-empty" title="Unassigned">–</span>
+  <% } %>
+</a>

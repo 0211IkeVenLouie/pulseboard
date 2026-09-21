@@ -1,0 +1,65 @@
+<%- include('../partials/head', { title: 'For you — Pulseboard' }) %>
+<%- include('../partials/app-shell', { active: active }) %>
+<main class="wrap page">
+  <div class="page-head">
+    <h1>For you</h1>
+    <span class="spacer"></span>
+    <a class="btn btn-sm" href="/projects">All projects</a>
+  </div>
+
+  <section>
+    <h2>Assigned to you</h2>
+    <% if (assigned.length === 0) { %>
+      <div class="empty"><strong>Nothing on your plate.</strong> Issues assigned to you show up here, most urgent first.</div>
+    <% } else { %>
+      <div class="rows">
+        <% assigned.forEach(function (issue) { %><%- include('../partials/issue-row', { issue: issue }) %><% }) %>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="section">
+    <h2>Your projects</h2>
+    <% if (projects.length === 0) { %>
+      <div class="empty"><strong>No projects yet.</strong>
+        <div style="margin-top:12px;"><a class="btn btn-primary" href="/projects">Create one</a></div>
+      </div>
+    <% } else { %>
+      <div class="split">
+        <% projects.forEach(function (project) { %>
+          <a class="feature" href="/projects/<%= project.key %>/board" style="display:block; color:inherit;">
+            <div class="feature-icon"><%= project.key.slice(0, 2) %></div>
+            <h3><%= project.name %></h3>
+            <p><%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %><% if (project.description) { %> · <%= project.description %><% } %></p>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+
+  <% if (reported.length > 0) { %>
+    <section class="section">
+      <h2>Reported by you</h2>
+      <div class="rows">
+        <% reported.slice(0, 8).forEach(function (issue) { %><%- include('../partials/issue-row', { issue: issue }) %><% }) %>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (recent.length > 0) { %>
+    <section class="section">
+      <h2>Pick up where you left off</h2>
+      <div class="rows">
+        <% recent.forEach(function (item) { %>
+          <a class="issue-row" href="<%= item.href %>">
+            <span class="itype"><%= item.entityType === 'project' ? '▣' : item.entityType === 'board' ? '▦' : '▪' %></span>
+            <span class="ititle"><%= item.title %></span>
+            <span class="spacer"></span>
+            <span class="istatus"><%= item.subtitle %></span>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
+</main>
+</body></html>
