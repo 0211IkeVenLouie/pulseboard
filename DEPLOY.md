@@ -17,7 +17,13 @@ the web service for you.
 That is the whole setup. `DATABASE_URL` is wired from the database defined in
 the blueprint, and `/healthz` is the health check.
 
-The URL Render gives you goes in the README, replacing the demo placeholder.
+### Sharing the one free database
+
+Render's free tier allows **one** Postgres database per account. This blueprint
+creates it, and the app keeps to a schema of its own (`DB_SCHEMA=pulseboard`)
+rather than sitting in `public`. Other apps can then use the same database with
+their own schemas — their tables and their migration history stay separate. See
+the sibling repos' `render.yaml` for the other side of that arrangement.
 
 ## Railway
 

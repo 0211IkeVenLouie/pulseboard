@@ -22,5 +22,7 @@ services:
         fromDatabase:
           name: pulseboard-db
           property: connectionString
+      - key: DB_SCHEMA
+        value: pulseboard
       - key: SEED_DEMO
         value: "true"

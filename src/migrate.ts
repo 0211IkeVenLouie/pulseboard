@@ -1,17 +1,27 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pool, query } from './db.js';
+import { pool, query, schema } from './db.js';
 
 const migrationsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
 export async function migrate(): Promise<string[]> {
-  await query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+  // The schema has to exist before anything unqualified can be created in it.
+  if (schema !== 'public') {
+    await query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+  }
+  // Deliberately schema-qualified: with `public` also on the search path, an
+  // unqualified IF NOT EXISTS would find another app's bookkeeping table and
+  // conclude that this app's migrations had already run.
+  const migrationsTable = `"${schema}".schema_migrations`;
+  await query(`CREATE TABLE IF NOT EXISTS ${migrationsTable} (
     name text PRIMARY KEY,
     applied_at timestamptz NOT NULL DEFAULT now()
   )`);
 
-  const applied = new Set((await query<{ name: string }>('SELECT name FROM schema_migrations')).map((r) => r.name));
+  const applied = new Set(
+    (await query<{ name: string }>(`SELECT name FROM ${migrationsTable}`)).map((r) => r.name),
+  );
   const files = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql')).sort();
   const ran: string[] = [];
 
@@ -22,7 +32,7 @@ export async function migrate(): Promise<string[]> {
     try {
       await client.query('BEGIN');
       await client.query(sql);
-      await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+      await client.query(`INSERT INTO ${migrationsTable} (name) VALUES ($1)`, [file]);
       await client.query('COMMIT');
       ran.push(file);
     } catch (error) {
