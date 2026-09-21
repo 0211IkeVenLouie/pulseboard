@@ -17,6 +17,7 @@
   color: inherit;
   cursor: text;
 }
+.board-title { cursor: text; }
 .board-title:hover { border-color: var(--line); background: #fafafb; }
 
 .presence { display: flex; align-items: center; }
@@ -72,13 +73,13 @@
   padding: 12px 14px 8px;
   font-weight: 600;
 }
-.column-title { cursor: text; border-radius: 6px; padding: 1px 4px; margin-left: -4px; }
-.column-title:hover { background: rgba(255, 255, 255, 0.75); }
+.column-title { cursor: text; border-radius: 6px; padding: 1px 5px; margin-left: -5px; }
+.column-title:hover { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
 .column-actions {
   margin-left: auto;
   display: flex;
   gap: 2px;
-  opacity: 0;
+  opacity: 0.35;
   transition: opacity 0.12s ease;
 }
 /* Revealed on hover, but always reachable by keyboard. */
@@ -106,8 +107,32 @@
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
 }
-.pcard-body { white-space: pre-wrap; word-break: break-word; }
-.pcard-body[contenteditable="true"]:focus { outline: 2px solid var(--accent-ring); border-radius: 4px; }
+.pcard-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  /* The card as a whole is grab-to-drag, but the text is the editable part —
+     an I-beam over it is the only affordance people reliably read. */
+  cursor: text;
+  border-radius: 5px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+}
+.pcard:hover .pcard-body {
+  background: #f4f5f8;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.pcard-body[contenteditable="true"] {
+  background: var(--surface);
+  cursor: text;
+}
+.pcard-body[contenteditable="true"]:focus {
+  outline: 2px solid var(--accent-ring);
+  box-shadow: none;
+  border-radius: 5px;
+}
+.pcard-masked { cursor: default; }
+.pcard:hover .pcard-masked { background: none; box-shadow: none; }
 .pcard-masked { color: var(--ink-faint); font-style: italic; letter-spacing: 0.08em; }
 .pcard-foot {
   display: flex;
@@ -132,7 +157,9 @@
   margin-left: auto;
   display: flex;
   gap: 1px;
-  opacity: 0;
+  /* Faint rather than absent: you can see there is something there before you
+     go looking for it. */
+  opacity: 0.4;
   transition: opacity 0.12s ease;
 }
 /* Same idea on the cards: quiet until you look at them, never hidden from

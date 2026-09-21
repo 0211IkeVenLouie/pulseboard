@@ -225,8 +225,10 @@ function cardNode(card) {
   body.className = card.masked ? 'pcard-body pcard-masked' : 'pcard-body';
   body.textContent = card.masked ? '•••••• hidden until reveal' : card.body;
   if (!card.masked) {
-    body.title = 'Double-click to edit';
-    body.addEventListener('dblclick', () => beginEdit(card, body, el));
+    body.title = 'Click to edit';
+    body.addEventListener('click', () => {
+      if (editingCardId !== card.id) beginEdit(card, body, el);
+    });
   }
 
   const foot = document.createElement('div');
