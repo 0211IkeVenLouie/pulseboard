@@ -412,7 +412,9 @@
   padding: 11px 13px;
   margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
-  cursor: grab;
+  /* Opening the issue is the common action; dragging is the occasional one,
+     so the cursor advertises the click. */
+  cursor: pointer;
   transition: box-shadow 0.16s var(--ease), transform 0.16s var(--ease), border-color 0.16s var(--ease);
 }
 .icard:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--line-strong); }
@@ -420,7 +422,15 @@
 .icard.dragging { opacity: 0.35; transform: rotate(1.5deg); }
 .icard.conflict { animation: shake 0.34s var(--ease); border-color: var(--danger); }
 .icard-title { display: block; color: inherit; font-weight: 520; line-height: 1.4; }
-.icard-title:hover { color: var(--accent); text-decoration: none; }
+/* Hovering anywhere on the card marks the title, so it is obvious that the
+   card leads somewhere and where you will land. */
+.icard:hover .icard-title,
+.icard-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
 .icard-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 
 /* Dashboard meters -------------------------------------------------------- */

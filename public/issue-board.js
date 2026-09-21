@@ -10,6 +10,9 @@ if (board) {
   const projectKey = board.dataset.project;
   let dragging = null;
   let dropLine = null;
+  // A drag ends with a mouseup, which in some browsers is followed by a click.
+  // Without this, finishing a drag would also open the issue.
+  let justDragged = false;
 
   function toast(message, variant) {
     const el = document.createElement('div');
@@ -55,7 +58,24 @@ if (board) {
   board.addEventListener('dragend', () => {
     dragging?.classList.remove('dragging');
     dragging = null;
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 0);
     clearDropLine();
+  });
+
+  /* The whole card opens the issue, not just the title. The title is still a
+     real link, so middle-click, ctrl-click and the keyboard all behave — this
+     only widens the target for a plain left click. */
+  board.addEventListener('click', (event) => {
+    if (justDragged) return;
+    const card = event.target.closest('.icard');
+    if (!card) return;
+    // Anything that is already interactive keeps its own behaviour.
+    if (event.target.closest('a, button, input, select, textarea, label')) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+    if (window.getSelection()?.toString()) return; // they were selecting text
+    const link = card.querySelector('.icard-title');
+    if (link) window.location.href = link.href;
   });
 
   for (const list of board.querySelectorAll('.column-list')) {
