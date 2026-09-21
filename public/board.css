@@ -173,11 +173,14 @@
   padding: 11px 13px;
   margin-bottom: 9px;
   box-shadow: var(--shadow-sm);
-  cursor: grab;
+  /* Editing is what people do to a card; dragging is the occasional move. */
+  cursor: text;
   transition: box-shadow 0.16s var(--ease), transform 0.16s var(--ease), border-color 0.16s var(--ease);
 }
 .pcard:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--line-strong); }
 .pcard:active { cursor: grabbing; }
+/* The footer is chrome, not content: buttons and the author line. */
+.pcard-foot { cursor: default; }
 .pcard.dragging { opacity: 0.35; transform: rotate(1.5deg); box-shadow: var(--shadow-lg); }
 .pcard.pending { border-style: dashed; opacity: 0.7; }
 .pcard.conflict { animation: shake 0.34s var(--ease); border-color: var(--danger); }

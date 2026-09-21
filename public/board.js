@@ -26,6 +26,9 @@ const state = {
 
 let editingCardId = null;
 let pendingMoves = 0;
+// A drop ends in a mouseup which some browsers follow with a click; without
+// this, finishing a drag would drop you into the editor.
+let justDragged = false;
 const columnEls = new Map();
 const cursors = new Map();
 const seenCards = new Set();
@@ -232,9 +235,7 @@ function cardNode(card) {
   body.textContent = card.masked ? '•••••• hidden until reveal' : card.body;
   if (!card.masked) {
     body.title = 'Click to edit';
-    body.addEventListener('click', () => {
-      if (editingCardId !== card.id) beginEdit(card, body, el);
-    });
+
   }
 
   const foot = document.createElement('div');
@@ -284,7 +285,20 @@ function cardNode(card) {
   });
   el.addEventListener('dragend', () => {
     el.classList.remove('dragging');
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 0);
     clearDropLine();
+  });
+
+  /* Anywhere on the card starts editing, not only the words themselves. The
+     card is the target people aim at; expecting them to hit the text is the
+     kind of precision a mouse should not demand. */
+  el.addEventListener('click', (event) => {
+    if (justDragged || card.masked || editingCardId === card.id) return;
+    if (event.target.closest('button')) return;        // vote, edit, delete
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+    if (window.getSelection()?.toString()) return;     // they were selecting text
+    beginEdit(card, body, el);
   });
 
   return el;
