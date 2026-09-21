@@ -3,6 +3,7 @@ import test, { after, beforeEach } from 'node:test';
 import { closeDatabase, resetDatabase } from './helpers.js';
 import { authenticate, createUser, type User } from '../src/accounts.js';
 import { createBoard } from '../src/boards.js';
+import { safeReturnTo } from '../src/tracker-routes.js';
 import { AppError } from '../src/errors.js';
 import {
   createIssue,
@@ -242,4 +243,15 @@ test('an issue is findable by its human key', async () => {
   assert.equal(found?.title, 'Second');
   assert.equal(found?.key, 'PAY-2');
   assert.equal(await getIssue('PAY', 999), undefined);
+});
+
+test('a return path is only honoured when it is same-site', async () => {
+  // An absolute URL in a form field would make "save" an open redirect.
+  assert.equal(safeReturnTo('/projects/PAY/board', '/fallback'), '/projects/PAY/board');
+  assert.equal(safeReturnTo('/recent?x=1', '/fallback'), '/recent?x=1');
+  assert.equal(safeReturnTo('https://evil.example.com', '/fallback'), '/fallback');
+  assert.equal(safeReturnTo('//evil.example.com', '/fallback'), '/fallback');
+  assert.equal(safeReturnTo('javascript:alert(1)', '/fallback'), '/fallback');
+  assert.equal(safeReturnTo(undefined, '/fallback'), '/fallback');
+  assert.equal(safeReturnTo(42, '/fallback'), '/fallback');
 });

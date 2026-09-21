@@ -454,3 +454,13 @@
   margin-bottom: 18px;
   font-weight: 520;
 }
+
+/* The row or card that was just saved, so a return trip lands somewhere. */
+.just-saved {
+  animation: just-saved 2s var(--ease);
+}
+@keyframes just-saved {
+  0%, 60% { box-shadow: 0 0 0 2px var(--accent-ring), var(--shadow-md); border-color: var(--accent); }
+  100% { box-shadow: var(--shadow-sm); }
+}
+.back-link { font-weight: 560; }

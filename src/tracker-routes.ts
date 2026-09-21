@@ -57,6 +57,36 @@ function asyncRoute(handler: (req: express.Request, res: express.Response) => Pr
   };
 }
 
+
+/**
+ * Where to send someone after they save.
+ *
+ * Only same-site paths are honoured: an absolute URL, or anything starting
+ * `//`, would turn a form post into an open redirect.
+ */
+export function safeReturnTo(candidate: unknown, fallback: string): string {
+  if (typeof candidate !== 'string') return fallback;
+  const value = candidate.trim();
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback;
+  return value;
+}
+
+/** The page someone came from, for a first render of a form. */
+function cameFrom(req: express.Request, fallback: string): string {
+  const fromQuery = safeReturnTo(req.query.from, '');
+  if (fromQuery) return fromQuery;
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const url = new URL(referer);
+      if (url.host === req.get('host')) return safeReturnTo(url.pathname + url.search, fallback);
+    } catch {
+      // A malformed referer is not worth an error; fall through.
+    }
+  }
+  return fallback;
+}
+
 const oneMonth = { httpOnly: true, sameSite: 'lax' as const, maxAge: 30 * 864e5 };
 
 /** Load the signed-in user, if there is one. The anonymous boards do not care. */
@@ -281,6 +311,7 @@ export function registerTrackerRoutes(app: express.Express): void {
       members: await listMembers(project.id),
       active: 'projects',
       error: null,
+      returnTo: cameFrom(req, `/projects/${project.key}/board`),
     });
   }));
 
@@ -306,7 +337,8 @@ export function registerTrackerRoutes(app: express.Express): void {
           assigneeId: body.assigneeId ? String(body.assigneeId) : null,
         },
       });
-      res.redirect(`/projects/${project.key}/issues/${issue.number}`);
+      const returnTo = safeReturnTo(body.returnTo, `/projects/${project.key}/board`);
+      res.redirect(`${returnTo}${returnTo.includes('?') ? '&' : '?'}saved=${issue.key}`);
     } catch (error) {
       if (error instanceof AppError) {
         res.status(httpStatusFor[error.code]).render('tracker/issue', {
@@ -315,6 +347,7 @@ export function registerTrackerRoutes(app: express.Express): void {
           members: await listMembers(project.id),
           active: 'projects',
           error: error.message,
+          returnTo: safeReturnTo(body.returnTo, `/projects/${project.key}/board`),
         });
         return;
       }
@@ -327,7 +360,9 @@ export function registerTrackerRoutes(app: express.Express): void {
     if (!project) return;
     const issue = await getIssue(project.key, Number(req.params.number));
     if (issue) await deleteIssue(project.id, issue.id);
-    res.redirect(`/projects/${project.key}/backlog`);
+    const returnTo = safeReturnTo(req.body?.returnTo, `/projects/${project.key}/backlog`);
+    // Never bounce back to the issue we just deleted.
+    res.redirect(returnTo.includes(`/issues/${req.params.number}`) ? `/projects/${project.key}/backlog` : returnTo);
   }));
 
   /* Anonymous boards can be starred too, once you have an account. */

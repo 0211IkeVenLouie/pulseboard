@@ -16,7 +16,7 @@
             <p class="faint small" style="padding: 6px 4px 10px;">Nothing in <%= STATUS_LABELS[status].toLowerCase() %>.</p>
           <% } %>
           <% inColumn.forEach(function (issue) { %>
-            <article class="icard" draggable="true" data-issue="<%= issue.id %>" data-version="<%= issue.version %>">
+            <article class="icard" draggable="true" data-issue-key="<%= issue.key %>" data-issue="<%= issue.id %>" data-version="<%= issue.version %>">
               <a class="icard-title" href="/projects/<%= project.key %>/issues/<%= issue.number %>"><%= issue.title %></a>
               <div class="icard-foot">
                 <span class="itype itype-<%= issue.type %>"><%= issue.type === 'bug' ? '●' : issue.type === 'story' ? '◆' : '▪' %></span>
@@ -41,4 +41,5 @@
 </main>
 <div class="toasts" id="toasts"></div>
 <script src="/issue-board.js" type="module"></script>
+<script src="/saved-toast.js" type="module"></script>
 </body></html>

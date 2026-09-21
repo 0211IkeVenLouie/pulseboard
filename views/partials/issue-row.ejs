@@ -1,4 +1,4 @@
-<a class="issue-row" href="/projects/<%= issue.projectKey %>/issues/<%= issue.number %>">
+<a class="issue-row" data-issue-key="<%= issue.key %>" href="/projects/<%= issue.projectKey %>/issues/<%= issue.number %>">
   <span class="itype itype-<%= issue.type %>" title="<%= TYPE_LABELS[issue.type] %>"><%= issue.type === 'bug' ? '●' : issue.type === 'story' ? '◆' : '▪' %></span>
   <span class="ikey"><%= issue.key %></span>
   <span class="ititle"><%= issue.title %></span>
