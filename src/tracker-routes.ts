@@ -6,7 +6,6 @@ import {
   destroyUserSession,
   type User,
 } from './accounts.js';
-import { getDemoBoard } from './boards.js';
 import { AppError, httpStatusFor } from './errors.js';
 import {
   ALL_STATUSES,
@@ -483,17 +482,4 @@ export function registerTrackerRoutes(app: express.Express): void {
     res.redirect(returnTo.includes(`/issues/${req.params.number}`) ? `/projects/${project.key}/backlog` : returnTo);
   }));
 
-  /* Anonymous boards can be starred too, once you have an account. */
-  app.post('/b/:slug/star', requireUser, asyncRoute(async (req, res) => {
-    const { getBoardBySlug } = await import('./boards.js');
-    const board = await getBoardBySlug(String(req.params.slug));
-    if (board) await toggleStar(req.user!.id, 'board', board.id);
-    res.redirect(`/b/${req.params.slug}`);
-  }));
-
-  app.get('/demo-project', asyncRoute(async (_req, res) => {
-    const project = await getDemoProject();
-    const board = await getDemoBoard();
-    res.redirect(project ? `/projects/${project.key}/board` : board ? `/b/${board.slug}` : '/');
-  }));
 }

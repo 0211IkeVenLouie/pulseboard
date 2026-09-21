@@ -181,35 +181,41 @@ test('“for you” lists what is assigned to me, urgent first, and hides done w
 
 test('recent lists what I looked at, most recent first, and survives deletion', async () => {
   const { lead, project } = await seed();
-  const issue = await createIssue({ project, title: 'Look at me', reporter: lead });
-  const board = await createBoard({ title: 'A retro', kind: 'retro' });
+  const first = await createIssue({ project, title: 'Look at me', reporter: lead });
+  const second = await createIssue({ project, title: 'Then me', reporter: lead });
 
   await recordView(lead.id, 'project', project.id);
-  await recordView(lead.id, 'issue', issue.id);
-  await recordView(lead.id, 'board', board.id);
+  await recordView(lead.id, 'issue', first.id);
+  await recordView(lead.id, 'issue', second.id);
 
   const recent = await listRecent(lead.id);
-  assert.deepEqual(recent.map((r) => r.entityType), ['board', 'issue', 'project']);
-  assert.equal(recent[0]!.title, 'A retro');
-  assert.equal(recent[1]!.href, `/projects/PAY/issues/${issue.number}`);
+  assert.deepEqual(recent.map((r) => r.title), ['Then me', 'Look at me', 'Payments']);
+  assert.equal(recent[1]!.href, `/projects/PAY/issues/${first.number}`);
 
   // Viewing again moves it to the top rather than adding a duplicate.
   await recordView(lead.id, 'project', project.id);
   const after = await listRecent(lead.id);
   assert.equal(after.length, 3, 'no duplicate rows');
   assert.equal(after[0]!.entityType, 'project');
+
+  // An entry pointing at something that no longer exists is dropped rather
+  // than rendered as a dead link. Retro boards were removed from the product,
+  // so old board entries take this path.
+  await recordView(lead.id, 'board', (await createBoard({ title: 'Gone', kind: 'retro' })).id);
+  assert.equal((await listRecent(lead.id)).length, 3, 'the unresolvable entry is not listed');
 });
 
 test('starring toggles, and starred things resolve to links', async () => {
   const { lead, project } = await seed();
-  const board = await createBoard({ title: 'A retro', kind: 'retro' });
+  const other = await createProject({ key: 'WEB', name: 'Website', lead });
 
   assert.equal(await toggleStar(lead.id, 'project', project.id), true);
-  assert.equal(await toggleStar(lead.id, 'board', board.id), true);
-  assert.deepEqual((await listStarred(lead.id)).map((s) => s.entityType).sort(), ['board', 'project']);
+  assert.equal(await toggleStar(lead.id, 'project', other.id), true);
+  assert.deepEqual((await listStarred(lead.id)).map((s) => s.title).sort(), ['Payments', 'Website']);
+  assert.equal((await listStarred(lead.id))[0]!.href, '/projects/WEB/board');
 
   assert.equal(await toggleStar(lead.id, 'project', project.id), false, 'starring again unstars');
-  assert.deepEqual((await listStarred(lead.id)).map((s) => s.entityType), ['board']);
+  assert.deepEqual((await listStarred(lead.id)).map((s) => s.title), ['Website']);
 });
 
 test('dashboard stats count every issue exactly once', async () => {
@@ -390,14 +396,14 @@ test('deleting a board removes its cards and any bookmarks of it', async () => {
 
 test('dismissing from Recent removes the entry, not the thing', async () => {
   const { lead, project } = await seed();
-  const board = await createBoard({ title: 'Still needed', kind: 'kanban' });
+  const issue = await createIssue({ project, title: 'Still needed', reporter: lead });
   await recordView(lead.id, 'project', project.id);
-  await recordView(lead.id, 'board', board.id);
+  await recordView(lead.id, 'issue', issue.id);
   assert.equal((await listRecent(lead.id)).length, 2);
 
-  await dismissRecent(lead.id, 'board', board.id);
+  await dismissRecent(lead.id, 'issue', issue.id);
   assert.deepEqual((await listRecent(lead.id)).map((r) => r.entityType), ['project']);
-  assert.ok(await getBoardBySlug(board.slug), 'the board itself is untouched');
+  assert.ok(await getIssue('PAY', issue.number), 'the issue itself is untouched');
 
   await clearRecent(lead.id);
   assert.equal((await listRecent(lead.id)).length, 0);

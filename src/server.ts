@@ -3,17 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import { createBoard, deleteBoard, getBoardBySlug, getDemoBoard, type BoardKind } from './boards.js';
 import { pool } from './db.js';
 import { env } from './env.js';
 import { migrate } from './migrate.js';
 import { normaliseIdentity } from './identity.js';
-import { attachRealtime } from './realtime.js';
 import { computeAssetVersion } from './asset-version.js';
 import { absoluteTime, initialsOf, relativeTime } from './relative-time.js';
 import { registerTrackerApi } from './tracker-json.js';
 import { registerTrackerRoutes, userMiddleware } from './tracker-routes.js';
-import { seedDemoBoard, seedDemoWorkspace } from './seed.js';
+import { seedDemoWorkspace } from './seed.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -57,52 +55,9 @@ export function createApp(): express.Express {
     }
   });
 
-  app.get('/', async (_req, res) => {
-    const demo = await getDemoBoard();
-    res.render('index', { demoSlug: demo?.slug ?? null });
-  });
-
-  app.get('/demo', async (_req, res) => {
-    const demo = (await getDemoBoard()) ?? (await seedDemoBoard());
-    res.redirect(`/b/${demo.slug}`);
-  });
-
-  app.post('/boards', async (req, res) => {
-    const kind: BoardKind = req.body?.kind === 'kanban' ? 'kanban' : 'retro';
-    const title = String(req.body?.title ?? '').trim() || (kind === 'retro' ? 'Team retro' : 'Team board');
-    const board = await createBoard({ title, kind });
-    res.redirect(`/b/${board.slug}`);
-  });
-
-  app.get('/b/:slug', async (req, res) => {
-    const board = await getBoardBySlug(req.params.slug);
-    if (!board) {
-      res.status(404).render('not-found');
-      return;
-    }
-    // Signed-in visitors can star a board and see it again later; anonymous
-    // ones carry on exactly as before.
-    let boardStarred = false;
-    if (req.user) {
-      const { isStarred, recordView } = await import('./tracker.js');
-      boardStarred = await isStarred(req.user.id, 'board', board.id);
-      await recordView(req.user.id, 'board', board.id);
-    }
-    res.render('board', { board, identity: res.locals.identity, boardStarred });
-  });
-
-  app.post('/b/:slug/delete', async (req, res, next) => {
-    try {
-      const board = await getBoardBySlug(String(req.params.slug));
-      if (!board) {
-        res.status(404).render('not-found');
-        return;
-      }
-      await deleteBoard(board.id);
-      res.redirect('/?deleted=board');
-    } catch (error) {
-      next(error);
-    }
+  app.get('/', (req, res) => {
+    if (req.user) return res.redirect('/for-you');
+    res.render('index');
   });
 
   app.use((_req, res) => res.status(404).render('not-found'));
@@ -118,14 +73,10 @@ export function createApp(): express.Express {
 export async function start(): Promise<void> {
   const applied = await migrate();
   if (applied.length) console.log(`Applied migrations: ${applied.join(', ')}`);
-  if (env.seedDemo) {
-    await seedDemoBoard();
-    await seedDemoWorkspace();
-  }
+  if (env.seedDemo) await seedDemoWorkspace();
 
   const app = createApp();
   const server = createServer(app);
-  attachRealtime(server);
   server.listen(env.port, () => console.log(`pulseboard listening on http://localhost:${env.port}`));
 
   const shutdown = () => {

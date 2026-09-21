@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pulseboard — Real-time retro and kanban boards</title>
-<meta name="description" content="Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room." />
-<meta property="og:title" content="Pulseboard — Real-time retro and kanban boards" />
-<meta property="og:description" content="Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room." />
+<title>Pulseboard — A light issue tracker</title>
+<meta name="description" content="Projects, issues and a board you can drag — without the forty screens of configuration. What is assigned to you, what you looked at last and what you starred, one click away." />
+<meta property="og:title" content="Pulseboard — A light issue tracker" />
+<meta property="og:description" content="Projects, issues and a board you can drag — without the forty screens of configuration. What is assigned to you, what you looked at last and what you starred, one click away." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%234f46e5'/></svg>" />
 <link rel="stylesheet" href="style.css" />
@@ -23,26 +23,26 @@
 
 <main class="wrap">
   <section class="hero">
-    <p class="tagline">Real-time retro and kanban boards</p>
-    <h1>Boards that move while you watch.</h1>
-    <p class="lede">Open the same URL in two windows and drag a card. It lands in both, with presence cursors and live votes. No accounts — the link is the room.</p>
+    <p class="tagline">A light issue tracker</p>
+    <h1>Track the work, not the tool.</h1>
+    <p class="lede">Projects, issues and a board you can drag — without the forty screens of configuration. What is assigned to you, what you looked at last and what you starred, one click away.</p>
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/0211IkeVenLouie/pulseboard">Read the code →</a>
       <a class="btn" href="#run">Run it in one command</a>
     </div>
     <div class="meta">
-      <span class="chip">18 tests passing</span>
-      <span class="chip-quiet chip">Node 22 · TypeScript · Express · Socket.IO · Postgres 16</span>
+      <span class="chip">43 tests passing</span>
+      <span class="chip-quiet chip">Node 22 · TypeScript · Express · Postgres 16</span>
     </div>
   </section>
 
   <figure>
-    <img src="screenshot.png" alt="A retro board with three columns, live presence avatars and another person's cursor" />
-    <figcaption>A retro board with three columns, live presence avatars and another person's cursor</figcaption>
+    <img src="issue.png" alt="The issue page: description and comments on the left, the fields in a sidebar" />
+    <figcaption>The issue page: description and comments on the left, the fields in a sidebar</figcaption>
   </figure>
 
   <h2>The hard part</h2>
-  <p class="question">Two people drag the same card at the same moment. What happens?</p>
+  <p class="question">Two people change the same issue at the same moment. What happens?</p>
   <p>Most tutorials answer “last write wins” and move on, which in practice means one person’s drag silently undoes the other’s while both screens show something different. Pulseboard answers it in three parts.</p>
     <h3>1. Positions are fractional indexes, not integers</h3>
   <p>A card’s place is a base-62 string compared lexicographically. Dropping between <code>"a1"</code> and <code>"a3"</code> mints <code>"a2"</code> and writes <strong>one row</strong>. The integer alternative renumbers the whole column on every move, so concurrent drops collide on rows neither person touched.</p>
@@ -55,10 +55,10 @@
   <p>Votes commute — two people voting at the same instant is not a conflict, it is two votes. Knowing which operations <em>need</em> concurrency control is most of the work; adding it everywhere is just latency.</p>
   
     <h3>Not concurrency, but worth a line</h3>
-  <p>Retro boards hide cards until everyone has written theirs. That masking happens <strong>on the server</strong> — a hidden card’s text is never sent to another client. Masking in CSS is one devtools inspection away from useless, which rather defeats a blind retro.</p>
+  <p>Removing something from Recent is not deleting it. Two controls that look alike and destroy different amounts of work is the sort of thing people discover once, badly — so they are kept visibly distinct, and a test asserts a dismissed entry leaves the underlying record intact.</p>
 
   <h2 id="run">Running it</h2>
-  <p>It is a server application — Postgres, sessions, and a live WebSocket connection. This page is a static showcase; the app itself needs somewhere to run. One command does it:</p>
+  <p>It is a server application — Postgres, sessions, and a database doing the work. This page is a static showcase; the app itself needs somewhere to run. One command does it:</p>
   <pre><code>git clone https://github.com/0211IkeVenLouie/pulseboard
 cd pulseboard
 docker compose up</code></pre>
@@ -66,10 +66,11 @@ docker compose up</code></pre>
 
   <h2>See it for yourself</h2>
   <ol class="steps">
-    <li>Open the demo board in two windows, side by side.</li>
-    <li>Drag the same card to different columns at the same time. One lands; the other snaps back.</li>
-    <li>Drag <em>different</em> cards into the same gap at once. Both land, in the same order in both windows.</li>
-    <li>Hit <strong>Hide cards</strong> in one window and inspect the other’s DOM. The text is not there.</li>
+    <li>Open the demo workspace — no signup — and land on <strong>For you</strong>.</li>
+    <li>Drag an issue across the board, reload, and watch it stay where you put it.</li>
+    <li>Open the same issue in two tabs, change the priority in both, and see the second one rejected with the current values rather than overwriting the first.</li>
+    <li>File two issues quickly and check the numbers: no duplicates, no gaps.</li>
+    <li>Dismiss something from <strong>Recent</strong>, then open it again from <strong>Projects</strong> — dismissing a list entry never deletes the work.</li>
   </ol>
 
   <h2>Also in this set</h2>

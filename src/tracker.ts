@@ -535,12 +535,10 @@ async function resolve(
           [byType('project')],
         )
       : [],
-    byType('board').length
-      ? query<{ id: string; slug: string; title: string; kind: string }>(
-          'SELECT id, slug, title, kind FROM boards WHERE id = ANY($1::uuid[])',
-          [byType('board')],
-        )
-      : [],
+    // Retro boards were removed from the product. Entries left over from then
+    // resolve to nothing and are dropped from the lists below, rather than
+    // rendering a link to a page that no longer exists.
+    [] as Array<{ id: string; slug: string; title: string; kind: string }>,
     byType('issue').length
       ? query<{ id: string; key: string; number: number; title: string; status: IssueStatus }>(
           `SELECT i.id, p.key, i.number, i.title, i.status

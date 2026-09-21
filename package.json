@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Real-time retro and kanban board with live presence, fractional-index ordering and conflict-safe drags.",
+  "description": "A light issue tracker: projects, issues, a drag board and a backlog, with fractional-index ordering and version-guarded edits.",
   "engines": {
     "node": ">=20"
   },

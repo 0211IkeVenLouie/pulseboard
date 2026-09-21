@@ -1,157 +1,113 @@
 # Pulseboard
 
-Real-time retro and kanban boards. Open the same URL in two windows, drag a card,
-and it lands in both — cursors, votes and all. No signup: the link is the room.
+A light issue tracker. Projects, issues and a board you can drag — without the
+forty screens of configuration.
 
-**[Run it in one command](#running-it)** — the demo board seeds itself, so there is
-something to look at the moment it boots.
+**[Run it in one command](#running-it)** — the demo workspace seeds itself with
+two projects, a fortnight of issues and a conversation on one of them, so there
+is something real to look at the moment it boots.
 
-> Deployed somewhere? Put the URL here; the landing page's *Open the demo board*
-> button is the one-click entry point.
-
-![Retro board with three columns, live presence avatars and another person's cursor](docs/screenshot.png)
+![The issue page: description and comments on the left, fields on the right](docs/issue.png)
 
 ---
 
+## What it is
+
+| | |
+|---|---|
+| `/for-you` | What is assigned to you, your projects, where you left off |
+| `/recent` | Projects and issues you opened, newest first |
+| `/starred` | Things you pinned, so a link is never lost |
+| `/dashboards` | Issue counts by status and priority, per project |
+| `/projects/:key/board` | Drag issues across To do → In progress → In review → Done |
+| `/projects/:key/backlog` | The list, and where new issues land |
+| `/projects/:key/issues/:n` | Description, comments, and the fields in a sidebar |
+
+Issues have a key (`PAY-14`), a type (task, bug, story), a status, a priority and
+an assignee. Comments are attributed and timestamped, editable and deletable by
+their author.
+
 ## The hard part
 
-Everything else here is CRUD. The interesting question is the one you hit about
-thirty seconds into building a collaborative board:
+A tracker is mostly forms. The parts that are not are where two people collide,
+and they need **different answers** — which is the interesting bit.
 
-> **Two people drag the same card at the same moment. What happens?**
+### Ordering: fractional indexes, not integers
 
-Most tutorials answer "last write wins" and move on, which in practice means one
-person's drag silently undoes the other's while both screens show something
-different. Pulseboard answers it in three parts.
+An issue's place in a column is a base-62 string compared lexicographically, not
+a `position` integer. Dropping between `"a1"` and `"a3"` mints `"a2"` and writes
+**one row**. The integer alternative renumbers the whole column on every move, so
+two concurrent drops collide on rows neither person touched.
 
-### 1. Positions are fractional indexes, not integers
+`src/ordering.ts` is the whole implementation, with the awkward part — splitting
+the same gap over and over without keys collapsing to nothing — covered by tests
+that split it 200 times and prepend 500 times.
 
-A card's place in a column is a base-62 string compared lexicographically, not a
-`position` integer. To drop a card between `"a1"` and `"a3"` the server mints
-`"a2"` — and writes **one row**.
+**The subtlety those keys depend on:** they are compared *byte-wise*. Postgres
+only does that if you say so. A `text` column inherits the database collation,
+and under a linguistic locale such as `en_US.UTF-8` the comparison is
+case-insensitive at the primary level, so `'l' < 'V'` and the server silently
+disagrees with the client about what order the issues are in. The columns are
+pinned to `COLLATE "C"`. CI caught this on its first run, after the suite had
+passed twenty times locally against a `C.UTF-8` database.
 
-The integer alternative (`UPDATE cards SET position = position + 1 WHERE position >= 4`)
-rewrites the whole column on every move, so two concurrent drops collide on rows
-neither person touched. With fractional indexes, two people moving *different*
-cards never contend at all.
+### Conflicts: a version guard, and a snap-back
 
-`src/ordering.ts` is the whole implementation, with the awkward part — an insert
-at the very front, repeatedly, without keys collapsing to nothing — covered by
-tests that split the same gap 200 times and prepend 500 times.
+Every issue carries a `version`. A drag or an edit sends the version the client
+held when it started; a stale one is rejected **with the authoritative issue**,
+so the optimistic UI puts the card back rather than quietly undoing someone
+else's work.
 
-#### The bug that only showed up in CI
+The destination column is locked for the length of the transaction, and the
+opposite bound of a drop is re-read from live adjacency rather than trusted from
+the browser. Taking both bounds from the client is what lets two simultaneous
+drops into the same gap mint the same key — there is a test that fails against
+that naive version and passes against this one.
 
-That design has a dependency it does not announce: the keys are compared
-**byte-wise**. JavaScript does that natively, so the client sorts
-`'0' < 'V' < 'l'`. Postgres does not, unless you tell it to — a `text` column
-inherits the database's default collation, and under a linguistic locale such
-as `en_US.UTF-8` the comparison is case-insensitive at the primary level, so
-`'l' < 'V'`.
+### Issue numbers: same problem, different answer
 
-Client and server then disagree about the order of the cards, and
-`WHERE sort_key > $1` — which is how a move finds the card adjacent to its drop
-point — returns the wrong row or none at all.
+`PAY-14` must exist exactly once. It cannot be a fractional index, and it cannot
+be `max() + 1`, which races. The counter lives on the project row and is
+incremented inside the insert transaction. A test fires eight concurrent filings
+and asserts the numbers come back 1–8: no duplicates, no gaps.
 
-The tests passed locally for twenty consecutive runs and failed on the first CI
-run, because my machine's Postgres was `C.UTF-8` and the stock `postgres:16`
-image is `en_US.UTF-8`. The fix is one line per column:
+### Delete is not dismiss
 
-```sql
-ALTER TABLE cards ALTER COLUMN sort_key TYPE text COLLATE "C";
-```
-
-`migrations/002_sort_key_collation.sql`, with a regression test that asserts
-both the declared collation and that Postgres and JavaScript agree on the order
-of `['0V', 'A', 'G', 'V', 'a', 'l', 'z']`.
-
-### 2. Only one end of the drop is trusted
-
-The browser says "put this card between A and B". By the time that message
-arrives, B may have moved to another column and someone else's card may already
-be sitting in the gap. So the server trusts **one** anchor and re-reads the other
-bound from the table under a row lock:
-
-```ts
-// src/boards.ts
-const above = anchorKey(input.beforeId);   // "after card A", as the client saw it
-beforeKey = above;
-afterKey  = await boundAbove(above);       // whatever is actually next, right now
-```
-
-Taking *both* bounds from the client is what makes two simultaneous drops into
-the same gap mint the same key. The test
-`two people dropping different cards into the same gap both succeed` fails
-against that naive version and passes against this one.
-
-If the anchor itself vanished mid-drag, the drop degrades to the bottom of the
-column instead of erroring. A drag that ends in a dialog box is a worse bug than
-a card landing one row off.
-
-### 3. Same card, same moment → the loser is told, and snaps back
-
-Every card carries a `version`. A move or edit sends the version the client had
-when it picked the card up:
-
-```
-Alice: move card#7 (version 3) → In progress     ✅ becomes version 4
-Bob:   move card#7 (version 3) → Done            ❌ CONFLICT, here is version 4
-```
-
-Bob's client applied his drag optimistically, so it already looks moved. The
-rejection carries the authoritative card, his optimistic state is replaced by it,
-and the card animates back to where Alice put it with a "Someone else moved that
-card first" toast. No refresh, no silent divergence.
-
-**Votes deliberately skip all of this.** They commute — two people voting at the
-same instant is not a conflict, it is two votes — so `toggleVote` has no version
-guard and no rollback. Knowing which operations *need* concurrency control is
-most of the work; adding it everywhere is just latency.
-
-### And one thing that is not concurrency
-
-Retro boards hide cards until everyone has written theirs. That masking happens
-in `toCard()` **on the server** — a hidden card's text is never sent to another
-client. Masking in CSS or in the client store is one devtools inspection away
-from being useless, which rather defeats the point of a blind retro.
-
-## Try the concurrency story yourself
-
-1. Open the demo board in two windows, side by side.
-2. Drag the same card to different columns in each window at roughly the same
-   time. One lands; the other snaps back with a toast.
-3. Drag *different* cards into the same gap simultaneously. Both land, in a
-   stable order, in both windows.
-4. Hit **Hide cards** in one window and inspect the other window's DOM. The text
-   is not there.
+Removing something from Recent is not deleting it. Two controls that look alike
+and destroy different amounts of work is the sort of thing people discover once,
+badly — so they are kept visibly distinct, and a test asserts that a dismissed
+entry leaves the underlying record intact.
 
 ## Stack
 
 | | |
 |---|---|
 | Server | Node 22, TypeScript, Express |
-| Realtime | Socket.IO (acks for mutations, fire-and-forget for cursors) |
 | Storage | Postgres 16, raw SQL, no ORM |
-| Client | Server-rendered EJS + ~450 lines of vanilla JS, no build step |
-| Deploy | Docker → Fly.io or Railway |
+| Client | Server-rendered EJS, a little vanilla JS for drag and drop |
+| Deploy | Docker → Render, Railway or Fly.io |
 
-Presence and cursors are in-memory per process — they are worthless a second
-after you disconnect. Everything else is in Postgres. Running more than one
-instance would need a Socket.IO Redis adapter; at this size it does not.
+No frontend framework and no build step for the client. Assets carry a content
+fingerprint and are served immutable, so a deploy can never serve fresh HTML
+against a stale stylesheet.
 
 ## Running it
 
 ```bash
-docker compose up          # http://localhost:3000, demo board seeded
+docker compose up          # http://localhost:3000, demo workspace seeded
 ```
 
 Or against your own Postgres:
 
 ```bash
-cp .env.example .env       # point DATABASE_URL at a database
+cp .env.example .env
 npm install
 npm run migrate && npm run seed
 npm run dev
 ```
+
+Demo account: `demo@pulseboard.dev` / `demo-password`, or press the button on
+the landing page.
 
 ## Tests
 
@@ -161,37 +117,37 @@ echo "DATABASE_URL=postgres://localhost:5432/pulseboard_test" > .env.test
 npm test
 ```
 
-The suite is 33 tests in three groups: property-ish tests for the ordering
-algorithm (random interleaved inserts must never break lexicographic order or
-mint a duplicate), and integration tests that run genuinely concurrent moves
-through `Promise.all` against real Postgres to check that exactly one wins and
-the loser is handed the authoritative card.
+43 tests. The ordering ones are property-ish — random interleaved inserts must
+never break lexicographic order or mint a duplicate. The rest run against real
+Postgres, including genuinely concurrent drags and filings through
+`Promise.all`, because a race test that does not actually race proves nothing.
+
+The suites share a database and truncate between cases, so the runner is pinned
+to one file at a time.
 
 ## Deploying
 
-One click on Render — there is a `render.yaml` that creates the database and
-the web service together. Railway and Fly.io instructions are in
-[DEPLOY.md](DEPLOY.md).
+One click on Render — `render.yaml` creates the database and the web service
+together. Railway and Fly.io are in [DEPLOY.md](DEPLOY.md). Migrations run on
+boot and the demo data seeds itself.
 
-The app boots with nothing but `DATABASE_URL`: migrations run on startup and
-the demo data seeds itself, so a fresh deploy has something to look at
-straight away.
+## History
 
-Migrations run on boot, so there is no separate release step. `min_machines_running = 1`
-is set because suspending a machine drops its WebSockets.
+This started as a real-time retro board — anonymous rooms, live presence cursors
+and server-side masking over Socket.IO — and the ordering and conflict machinery
+above came from there. That half was removed to make the product one thing
+instead of two; the code is still in the repo's history if you want to read it.
 
 ## Shortcuts taken
 
 Worth naming, since a portfolio project that claims to be finished is lying:
 
-- **Anyone with the link can edit.** Boards are unlisted random slugs; that is
-  the whole access model. Fine for a retro, not for anything private.
-- **Drag and drop is HTML5 DnD**, so it is mouse-only. Touch needs a pointer-event
-  implementation.
-- **Single process.** Presence lives in memory; horizontal scaling needs the
-  Redis adapter.
-- **No history.** Deleting a card deletes it, and deleting a column takes its
-  cards with it.
+- **No sprints, story points or workflows.** Statuses are fixed.
+- **No activity history.** Comments are the only record of what changed.
+- **Anyone signed in can view any project**; only members appear in assignee
+  lists and only the lead can delete.
+- **No search.** With a few hundred issues you would want it.
+- **No attachments or rich text.** Descriptions and comments are plain text.
 
 ## Licence
 
