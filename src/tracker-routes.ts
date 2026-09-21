@@ -21,7 +21,9 @@ import {
   addMember,
   createIssue,
   createProject,
+  clearRecent,
   deleteProject,
+  dismissRecent,
   deleteIssue,
   getDemoProject,
   getIssue,
@@ -201,6 +203,30 @@ export function registerTrackerRoutes(app: express.Express): void {
 
   app.get('/recent', requireUser, asyncRoute(async (req, res) => {
     res.render('tracker/recent', { items: await listRecent(req.user!.id, 30), active: 'recent' });
+  }));
+
+  /* Removing something from Recent or Starred is about the list, not the
+     thing: it stops following you around without deleting any work. */
+  app.post('/recent/dismiss', requireUser, asyncRoute(async (req, res) => {
+    await dismissRecent(
+      req.user!.id,
+      String(req.body?.entityType ?? '') as 'project' | 'board' | 'issue',
+      String(req.body?.entityId ?? ''),
+    );
+    res.redirect(safeReturnTo(req.body?.returnTo, '/recent'));
+  }));
+
+  app.post('/recent/clear', requireUser, asyncRoute(async (req, res) => {
+    await clearRecent(req.user!.id);
+    res.redirect('/recent');
+  }));
+
+  app.post('/starred/remove', requireUser, asyncRoute(async (req, res) => {
+    const entityType = String(req.body?.entityType ?? '');
+    if (entityType === 'project' || entityType === 'board') {
+      await toggleStar(req.user!.id, entityType, String(req.body?.entityId ?? ''));
+    }
+    res.redirect(safeReturnTo(req.body?.returnTo, '/starred'));
   }));
 
   app.get('/starred', requireUser, asyncRoute(async (req, res) => {

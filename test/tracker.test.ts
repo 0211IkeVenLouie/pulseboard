@@ -12,7 +12,9 @@ import {
   createIssue,
   deleteComment,
   deleteIssue,
+  clearRecent,
   deleteProject,
+  dismissRecent,
   editComment,
   listComments,
   createProject,
@@ -384,4 +386,20 @@ test('deleting a board removes its cards and any bookmarks of it', async () => {
   assert.equal((await listStarred(lead.id)).length, 0);
   assert.equal((await listRecent(lead.id)).length, 0);
   await assert.rejects(() => deleteBoard(board.id), (e: AppError) => e.code === 'NOT_FOUND');
+});
+
+test('dismissing from Recent removes the entry, not the thing', async () => {
+  const { lead, project } = await seed();
+  const board = await createBoard({ title: 'Still needed', kind: 'kanban' });
+  await recordView(lead.id, 'project', project.id);
+  await recordView(lead.id, 'board', board.id);
+  assert.equal((await listRecent(lead.id)).length, 2);
+
+  await dismissRecent(lead.id, 'board', board.id);
+  assert.deepEqual((await listRecent(lead.id)).map((r) => r.entityType), ['project']);
+  assert.ok(await getBoardBySlug(board.slug), 'the board itself is untouched');
+
+  await clearRecent(lead.id);
+  assert.equal((await listRecent(lead.id)).length, 0);
+  assert.deepEqual((await listProjectsFor(lead.id)).map((p) => p.key), ['PAY'], 'and so is the project');
 });

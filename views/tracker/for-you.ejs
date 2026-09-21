@@ -27,11 +27,20 @@
     <% } else { %>
       <div class="split">
         <% projects.forEach(function (project) { %>
-          <a class="feature" href="/projects/<%= project.key %>/board" style="display:block; color:inherit;">
-            <div class="feature-icon"><%= project.key.slice(0, 2) %></div>
-            <h3><%= project.name %></h3>
-            <p><%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %><% if (project.description) { %> · <%= project.description %><% } %></p>
-          </a>
+          <div class="feature project-card">
+            <a href="/projects/<%= project.key %>/board" style="color: inherit;">
+              <div class="feature-icon"><%= project.key.slice(0, 2) %></div>
+              <h3><%= project.name %></h3>
+              <p><%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %><% if (project.description) { %> · <%= project.description %><% } %></p>
+            </a>
+            <% if (project.leadId === user.id) { %>
+              <form method="post" action="/projects/<%= project.key %>/delete" class="project-card-delete"
+                    onsubmit="return confirm('Delete <%= project.key %> and its <%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %>? This cannot be undone.');">
+                <button class="pcard-btn pcard-del" type="submit"
+                        title="Delete project" aria-label="Delete the <%= project.name %> project">×</button>
+              </form>
+            <% } %>
+          </div>
         <% }) %>
       </div>
     <% } %>
@@ -51,12 +60,9 @@
       <h2>Pick up where you left off</h2>
       <div class="rows">
         <% recent.forEach(function (item) { %>
-          <a class="issue-row" href="<%= item.href %>">
-            <span class="itype"><%= item.entityType === 'project' ? '▣' : item.entityType === 'board' ? '▦' : '▪' %></span>
-            <span class="ititle"><%= item.title %></span>
-            <span class="spacer"></span>
-            <span class="istatus"><%= item.subtitle %></span>
-          </a>
+          <%- include('../partials/bookmark-row', {
+                item: item, dismiss: '/recent/dismiss', dismissLabel: 'Remove from Recent', returnTo: '/for-you',
+              }) %>
         <% }) %>
       </div>
     </section>

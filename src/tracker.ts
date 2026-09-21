@@ -579,6 +579,17 @@ async function resolve(
   });
 }
 
+/** Take one entry out of someone's Recent list, without touching the thing. */
+export async function dismissRecent(userId: string, entityType: EntityType, entityId: string): Promise<void> {
+  await query('DELETE FROM recent_views WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3', [
+    userId, entityType, entityId,
+  ]);
+}
+
+export async function clearRecent(userId: string): Promise<void> {
+  await query('DELETE FROM recent_views WHERE user_id = $1', [userId]);
+}
+
 export async function listRecent(userId: string, limit = 20): Promise<Bookmark[]> {
   const rows = await query<{ entity_type: EntityType; entity_id: string; at: Date }>(
     'SELECT entity_type, entity_id, viewed_at AS at FROM recent_views WHERE user_id = $1 ORDER BY viewed_at DESC LIMIT $2',

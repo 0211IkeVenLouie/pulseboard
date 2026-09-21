@@ -564,3 +564,11 @@
 .link-button:hover { text-decoration: underline; }
 
 .comment-form { display: flex; gap: 12px; align-items: flex-start; margin-top: 4px; }
+
+/* A project card carries its own delete, so it cannot be one big link. */
+.project-card { position: relative; }
+.project-card > a { display: block; text-decoration: none; }
+.project-card > a:hover { text-decoration: none; }
+.project-card-delete { position: absolute; top: 10px; right: 10px; opacity: 0.4; transition: opacity 0.14s var(--ease); }
+.project-card:hover .project-card-delete,
+.project-card-delete:focus-within { opacity: 1; }

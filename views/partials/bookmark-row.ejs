@@ -1,0 +1,15 @@
+<%# One entry in Recent, Starred or "pick up where you left off".
+    `dismiss` is the action posted when the × is pressed: it removes the entry
+    from the list, and never deletes the underlying project, board or issue. %>
+<div class="issue-row">
+  <span class="itype"><%= item.entityType === 'project' ? '▣' : item.entityType === 'board' ? '▦' : '▪' %></span>
+  <a class="ititle" href="<%= item.href %>" style="color: inherit;"><%= item.title %></a>
+  <span class="spacer"></span>
+  <span class="istatus"><%= item.subtitle %></span>
+  <form method="post" action="<%= dismiss %>">
+    <input type="hidden" name="entityType" value="<%= item.entityType %>" />
+    <input type="hidden" name="entityId" value="<%= item.entityId %>" />
+    <input type="hidden" name="returnTo" value="<%= returnTo %>" />
+    <button class="pcard-btn" type="submit" title="<%= dismissLabel %>" aria-label="<%= dismissLabel %>: <%= item.title %>">×</button>
+  </form>
+</div>
