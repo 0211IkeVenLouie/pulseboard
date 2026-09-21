@@ -12,6 +12,17 @@
     <% } %>
     <button class="btn btn-sm" id="add-column">+ Column</button>
     <button class="btn btn-sm" id="copy-link">Copy link</button>
+    <% if (user) { %>
+      <form method="post" action="/b/<%= board.slug %>/star">
+        <button class="btn btn-sm btn-ghost" type="submit"
+                title="<%= boardStarred ? 'Remove from Starred' : 'Keep this board in Starred' %>">
+          <%= boardStarred ? '★' : '☆' %>
+        </button>
+      </form>
+      <a class="btn btn-sm btn-ghost" href="/for-you"><%= user.name %></a>
+    <% } else { %>
+      <a class="btn btn-sm btn-ghost" href="/signin">Sign in</a>
+    <% } %>
   </div>
 </header>
 

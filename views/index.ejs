@@ -1,11 +1,5 @@
 <%- include('partials/head', { title: 'Pulseboard — real-time retro & kanban' }) %>
-<header class="topbar">
-  <div class="wrap">
-    <a class="brand" href="/"><span class="brand-dot"></span> Pulseboard</a>
-    <span class="spacer"></span>
-    <a class="btn btn-sm" href="https://github.com/<%= process.env.GITHUB_REPO || '0211IkeVenLouie/pulseboard' %>">Source ↗</a>
-  </div>
-</header>
+<%- include('partials/app-shell', { active: '' }) %>
 
 <main class="wrap narrow">
   <section class="hero">
@@ -44,6 +38,33 @@
         <button class="btn btn-primary" type="submit">Create board</button>
         <p class="hint">Anyone with the link can read and edit. Boards are not listed anywhere.</p>
       </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="section-label">And, if you sign in</p>
+    <h2>A light issue tracker.</h2>
+    <p class="muted">
+      Projects with a key, issues with a type, status, priority and assignee, a drag
+      board, a backlog — and the four surfaces that stop work going missing:
+      <strong>For you</strong>, <strong>Recent</strong>, <strong>Starred</strong> and
+      <strong>Dashboards</strong>. Boards stay anonymous; an account only adds the tracker.
+    </p>
+    <div class="hero-actions" style="margin-top: 16px;">
+      <% if (user) { %>
+        <a class="btn btn-primary" href="/for-you">Go to your work →</a>
+      <% } else { %>
+        <form method="post" action="/demo-signin">
+          <button class="btn btn-primary" type="submit">Try the demo workspace →</button>
+        </form>
+        <a class="btn" href="/signup">Create an account</a>
+      <% } %>
+    </div>
+    <div class="chips">
+      <span class="chip" style="--chip-hue: var(--hue-1)">Projects &amp; issues</span>
+      <span class="chip" style="--chip-hue: var(--hue-2)">Drag board</span>
+      <span class="chip" style="--chip-hue: var(--hue-3)">Backlog</span>
+      <span class="chip" style="--chip-hue: var(--hue-4)">Dashboards</span>
     </div>
   </section>
 

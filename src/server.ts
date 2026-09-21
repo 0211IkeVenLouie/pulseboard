@@ -71,7 +71,15 @@ export function createApp(): express.Express {
       res.status(404).render('not-found');
       return;
     }
-    res.render('board', { board, identity: res.locals.identity });
+    // Signed-in visitors can star a board and see it again later; anonymous
+    // ones carry on exactly as before.
+    let boardStarred = false;
+    if (req.user) {
+      const { isStarred, recordView } = await import('./tracker.js');
+      boardStarred = await isStarred(req.user.id, 'board', board.id);
+      await recordView(req.user.id, 'board', board.id);
+    }
+    res.render('board', { board, identity: res.locals.identity, boardStarred });
   });
 
   app.use((_req, res) => res.status(404).render('not-found'));
