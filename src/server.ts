@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import { createBoard, getBoardBySlug, getDemoBoard, type BoardKind } from './boards.js';
+import { createBoard, deleteBoard, getBoardBySlug, getDemoBoard, type BoardKind } from './boards.js';
 import { pool } from './db.js';
 import { env } from './env.js';
 import { migrate } from './migrate.js';
@@ -89,6 +89,20 @@ export function createApp(): express.Express {
       await recordView(req.user.id, 'board', board.id);
     }
     res.render('board', { board, identity: res.locals.identity, boardStarred });
+  });
+
+  app.post('/b/:slug/delete', async (req, res, next) => {
+    try {
+      const board = await getBoardBySlug(String(req.params.slug));
+      if (!board) {
+        res.status(404).render('not-found');
+        return;
+      }
+      await deleteBoard(board.id);
+      res.redirect('/?deleted=board');
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.use((_req, res) => res.status(404).render('not-found'));

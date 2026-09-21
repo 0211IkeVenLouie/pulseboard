@@ -165,6 +165,36 @@ export async function listProjectsFor(userId: string): Promise<Array<Project & {
   return rows.map((row) => ({ ...toProject(row), issueCount: row.issue_count }));
 }
 
+/**
+ * Delete a project and everything under it.
+ *
+ * Issues, members and comments go by cascade. Stars and recent views do not:
+ * they point at an id without a foreign key, because one row has to be able to
+ * reference a project, a board or an issue. Orphans there are harmless (both
+ * lists drop anything that no longer resolves) but they would accumulate, so
+ * they are cleared explicitly.
+ */
+export async function deleteProject(projectId: string, userId: string): Promise<void> {
+  return transaction(async (client) => {
+    const project = (
+      await client.query<{ lead_id: string | null }>('SELECT lead_id FROM projects WHERE id = $1', [projectId])
+    ).rows[0];
+    if (!project) throw new AppError('NOT_FOUND', 'That project is already gone.');
+    if (project.lead_id !== userId) {
+      throw new AppError('FORBIDDEN', 'Only the project lead can delete it.');
+    }
+
+    const issueIds = (
+      await client.query<{ id: string }>('SELECT id FROM issues WHERE project_id = $1', [projectId])
+    ).rows.map((row) => row.id);
+    const referenced = [projectId, ...issueIds];
+
+    await client.query('DELETE FROM stars WHERE entity_id = ANY($1::uuid[])', [referenced]);
+    await client.query('DELETE FROM recent_views WHERE entity_id = ANY($1::uuid[])', [referenced]);
+    await client.query('DELETE FROM projects WHERE id = $1', [projectId]);
+  });
+}
+
 export async function listMembers(projectId: string): Promise<User[]> {
   const rows = await query<{ id: string; email: string; name: string; is_demo: boolean }>(
     `SELECT u.id, u.email, u.name, u.is_demo

@@ -21,6 +21,7 @@ import {
   addMember,
   createIssue,
   createProject,
+  deleteProject,
   deleteIssue,
   getDemoProject,
   getIssue,
@@ -213,7 +214,12 @@ export function registerTrackerRoutes(app: express.Express): void {
   }));
 
   app.get('/projects', requireUser, asyncRoute(async (req, res) => {
-    res.render('tracker/projects', { projects: await listProjectsFor(req.user!.id), active: 'projects', error: null });
+    res.render('tracker/projects', {
+      projects: await listProjectsFor(req.user!.id),
+      active: 'projects',
+      error: null,
+      query: req.query,
+    });
   }));
 
   app.post('/projects', requireUser, asyncRoute(async (req, res) => {
@@ -231,6 +237,7 @@ export function registerTrackerRoutes(app: express.Express): void {
           projects: await listProjectsFor(req.user!.id),
           active: 'projects',
           error: error.message,
+          query: req.query,
         });
         return;
       }
@@ -272,6 +279,26 @@ export function registerTrackerRoutes(app: express.Express): void {
       isStarred(req.user!.id, 'project', project.id),
     ]);
     res.render('tracker/backlog', { project, issues, members, starred, active: 'projects', view: 'backlog' });
+  }));
+
+  app.post('/projects/:key/delete', requireUser, asyncRoute(async (req, res) => {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    try {
+      await deleteProject(project.id, req.user!.id);
+      res.redirect('/projects?deleted=' + encodeURIComponent(project.key));
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(httpStatusFor[error.code]).render('tracker/projects', {
+          projects: await listProjectsFor(req.user!.id),
+          active: 'projects',
+          error: error.message,
+          query: req.query,
+        });
+        return;
+      }
+      throw error;
+    }
   }));
 
   app.post('/projects/:key/star', requireUser, asyncRoute(async (req, res) => {

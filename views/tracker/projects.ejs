@@ -3,6 +3,9 @@
 <main class="wrap page">
   <div class="page-head"><h1>Projects</h1></div>
   <% if (error) { %><div class="notice"><%= error %></div><% } %>
+  <% if (typeof query !== 'undefined' && query.deleted) { %>
+    <div class="notice notice-ok"><%= query.deleted %> and everything in it was deleted.</div>
+  <% } %>
 
   <div class="grid-2">
     <div>
@@ -11,12 +14,17 @@
       <% } else { %>
         <div class="rows">
           <% projects.forEach(function (project) { %>
-            <a class="issue-row" href="/projects/<%= project.key %>/board">
-              <span class="ikey"><%= project.key %></span>
-              <span class="ititle"><%= project.name %></span>
+            <div class="issue-row">
+              <a class="ikey" href="/projects/<%= project.key %>/board"><%= project.key %></a>
+              <a class="ititle" href="/projects/<%= project.key %>/board" style="color: inherit;"><%= project.name %></a>
               <span class="spacer"></span>
               <span class="istatus"><%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %></span>
-            </a>
+              <form method="post" action="/projects/<%= project.key %>/delete"
+                    onsubmit="return confirm('Delete <%= project.key %> — <%= project.name.replace(/'/g, "\\'") %> — and its <%= project.issueCount %> issue<%= project.issueCount === 1 ? '' : 's' %>? This cannot be undone.');">
+                <button class="pcard-btn pcard-del" type="submit"
+                        aria-label="Delete the <%= project.name %> project" title="Delete project">×</button>
+              </form>
+            </div>
           <% }) %>
         </div>
       <% } %>

@@ -2,15 +2,17 @@ import assert from 'node:assert/strict';
 import test, { after, beforeEach } from 'node:test';
 import { closeDatabase, resetDatabase } from './helpers.js';
 import { authenticate, createUser, type User } from '../src/accounts.js';
-import { createBoard } from '../src/boards.js';
+import { createBoard, createCard, deleteBoard, getBoardBySlug, getBoardState } from '../src/boards.js';
 import { safeReturnTo } from '../src/tracker-routes.js';
 import { AppError } from '../src/errors.js';
 import { initialsOf, relativeTime } from '../src/relative-time.js';
 import {
   addComment,
+  addMember,
   createIssue,
   deleteComment,
   deleteIssue,
+  deleteProject,
   editComment,
   listComments,
   createProject,
@@ -329,4 +331,57 @@ test('relative time reads the way people say it', () => {
   assert.match(ago(40 * 24 * 60 * 60 * 1000), /Aug/);
   assert.equal(initialsOf('Priya Raman'), 'PR');
   assert.equal(initialsOf('madonna'), 'M');
+});
+
+test('deleting a project takes its issues, comments and bookmarks with it', async () => {
+  const { lead, project } = await seed();
+  const issue = await createIssue({ project, title: 'Doomed', reporter: lead });
+  await addComment({ issueId: issue.id, authorId: lead.id, body: 'Said something' });
+  await toggleStar(lead.id, 'project', project.id);
+  await recordView(lead.id, 'project', project.id);
+  await recordView(lead.id, 'issue', issue.id);
+
+  // Something unrelated must survive, so this is a targeted delete, not a purge.
+  const keep = await createProject({ key: 'KEEP', name: 'Still here', lead });
+  await toggleStar(lead.id, 'project', keep.id);
+
+  await deleteProject(project.id, lead.id);
+
+  assert.deepEqual((await listProjectsFor(lead.id)).map((p) => p.key), ['KEEP']);
+  assert.equal(await getIssue('PAY', issue.number), undefined);
+  assert.equal((await listComments(issue.id)).length, 0);
+  // No dangling bookmarks pointing at things that no longer exist.
+  assert.deepEqual((await listStarred(lead.id)).map((s) => s.title), ['Still here']);
+  assert.equal((await listRecent(lead.id)).length, 0);
+});
+
+test('only the project lead can delete a project', async () => {
+  const { lead, dev, project } = await seed();
+  await addMember(project.id, dev.id);
+  await assert.rejects(
+    () => deleteProject(project.id, dev.id),
+    (error: AppError) => error.code === 'FORBIDDEN' && /lead/.test(error.message),
+  );
+  assert.equal((await listProjectsFor(lead.id)).length, 1, 'nothing was deleted');
+  await deleteProject(project.id, lead.id);
+  assert.equal((await listProjectsFor(lead.id)).length, 0);
+  await assert.rejects(() => deleteProject(project.id, lead.id), (e: AppError) => e.code === 'NOT_FOUND');
+});
+
+test('deleting a board removes its cards and any bookmarks of it', async () => {
+  const { lead } = await seed();
+  const board = await createBoard({ title: 'Throwaway', kind: 'kanban' });
+  const { columns } = await getBoardState(board, lead.id);
+  await createCard({
+    board, columnId: columns[0]!.id, body: 'a card', authorId: lead.id, authorName: 'Priya Raman',
+  });
+  await toggleStar(lead.id, 'board', board.id);
+  await recordView(lead.id, 'board', board.id);
+
+  await deleteBoard(board.id);
+
+  assert.equal(await getBoardBySlug(board.slug), undefined);
+  assert.equal((await listStarred(lead.id)).length, 0);
+  assert.equal((await listRecent(lead.id)).length, 0);
+  await assert.rejects(() => deleteBoard(board.id), (e: AppError) => e.code === 'NOT_FOUND');
 });

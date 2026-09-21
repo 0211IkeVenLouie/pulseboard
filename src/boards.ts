@@ -490,6 +490,24 @@ export async function deleteColumn(board: Board, columnId: string): Promise<void
   if (deleted.length === 0) throw new AppError('NOT_FOUND', 'That column no longer exists.');
 }
 
+/**
+ * Delete a board, its columns and its cards.
+ *
+ * Anyone with the link can do this, which is the same access model as editing
+ * it — there are no accounts on an anonymous board to check against. Stars and
+ * recent views are cleared by hand, since they reference the id without a
+ * foreign key.
+ */
+export async function deleteBoard(boardId: string): Promise<void> {
+  return transaction(async (client) => {
+    const existing = (await client.query('SELECT 1 FROM boards WHERE id = $1', [boardId])).rowCount;
+    if (!existing) throw new AppError('NOT_FOUND', 'That board is already gone.');
+    await client.query('DELETE FROM stars WHERE entity_type = $1 AND entity_id = $2', ['board', boardId]);
+    await client.query('DELETE FROM recent_views WHERE entity_type = $1 AND entity_id = $2', ['board', boardId]);
+    await client.query('DELETE FROM boards WHERE id = $1', [boardId]);
+  });
+}
+
 export async function addColumn(board: Board, title: string): Promise<Column> {
   const tail = await one<{ sort_key: string }>(
     'SELECT sort_key FROM columns WHERE board_id = $1 ORDER BY sort_key DESC LIMIT 1',

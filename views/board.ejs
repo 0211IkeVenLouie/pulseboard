@@ -12,6 +12,10 @@
     <% } %>
     <button class="btn btn-sm" id="add-column">+ Column</button>
     <button class="btn btn-sm" id="copy-link">Copy link</button>
+    <form method="post" action="/b/<%= board.slug %>/delete"
+          onsubmit="return confirm('Delete this board and every card on it? Anyone with the link loses it too. This cannot be undone.');">
+      <button class="btn btn-sm btn-ghost" type="submit" title="Delete this board">Delete board</button>
+    </form>
     <% if (user) { %>
       <form method="post" action="/b/<%= board.slug %>/star">
         <button class="btn btn-sm btn-ghost" type="submit"
